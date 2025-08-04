@@ -424,87 +424,6 @@
             color: #000;
         }
 
-        .warning-btn {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
-        }
-
-        .warning-btn:hover {
-            transform: translateY(-2px);
-            animation: none;
-        }
-
-        .limitations-section {
-            margin: 20px 0;
-        }
-
-        .limitation-category {
-            margin-bottom: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #ff6b6b;
-        }
-
-        .limitation-category h3 {
-            color: #d73502;
-            margin-bottom: 10px;
-        }
-
-        .limitation-list {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .limitation-list li {
-            padding: 5px 0;
-            padding-left: 25px;
-            position: relative;
-        }
-
-        .limitation-list li:before {
-            content: "⚠️";
-            position: absolute;
-            left: 0;
-        }
-
-        .warning-banner {
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
-            border: 2px solid #ff6b6b;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .warning-banner-icon {
-            font-size: 2rem;
-        }
-
-        .warning-banner-content {
-            flex: 1;
-        }
-
-        .warning-banner-title {
-            font-weight: bold;
-            color: #d73502;
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 <body>
@@ -512,21 +431,6 @@
         <div class="header">
             <h1>📚 Legal Citation Finder</h1>
             <p>Upload a text file to extract and verify legal citations using CourtListener's Eyecite API</p>
-            <button class="warning-btn" onclick="showLimitationsModal()" style="margin-top: 15px;">
-                ⚠️ IMPORTANT: Limitations & Warnings
-            </button>
-        </div>
-
-        <!-- Warning Banner -->
-        <div class="warning-banner">
-            <div class="warning-banner-icon">⚠️</div>
-            <div class="warning-banner-content">
-                <div class="warning-banner-title">Critical Notice</div>
-                <div>This tool is both overinclusive (false positives) and underinclusive (false negatives). Legal hallucination detection is inherently difficult. Always manually verify results.</div>
-            </div>
-            <button onclick="showLimitationsModal()" style="padding: 8px 15px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                View All Limitations
-            </button>
         </div>
 
         <!-- Collapsed upload summary (hidden by default) -->
@@ -1369,6 +1273,14 @@
         function exportToCSV() {
             const citations = window.currentCitations || [];
             
+            // Create timestamp for filename
+            const now = new Date();
+            const timestamp = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + '_' + 
+                String(now.getHours()).padStart(2, '0') + '-' + 
+                String(now.getMinutes()).padStart(2, '0');
+            
             const headers = ['Citation Number', 'Original Citation', 'Status', 'Action Required', 'Claimed Case Name', 'Actual Case Name', 'Context with Markers'];
             const csvContent = [
                 headers.join(','),
@@ -1414,7 +1326,8 @@
                 })
             ].join('\n');
 
-            downloadFile(csvContent, 'citation-editing-guide.csv', 'text/csv');
+            const filename = 'citation-editing-guide_' + timestamp + '.csv';
+            downloadFile(csvContent, filename, 'text/csv');
         }
 
         function exportToJSON() {
@@ -1473,107 +1386,108 @@
                 })
             };
 
+            const now = new Date();
+            const timestamp = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + '_' + 
+                String(now.getHours()).padStart(2, '0') + '-' + 
+                String(now.getMinutes()).padStart(2, '0');
+            
             const jsonContent = JSON.stringify(exportData, null, 2);
-            downloadFile(jsonContent, 'citation-editing-guide.json', 'application/json');
+            const filename = 'citation-editing-guide_' + timestamp + '.json';
+            downloadFile(jsonContent, filename, 'application/json');
         }
 
         function exportToWord() {
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
             
-            let wordContent = `LEGAL CITATION EDITING GUIDE\par
-Generated: ${new Date().toLocaleDateString()}\par
-\par
-HOW TO USE THIS GUIDE:\par
-1. Find each citation in your original document using the "Context" sections below\par
-2. Follow the "Action Required" instructions for each citation\par
-3. Pay special attention to HIGH severity items\par
-\par
-SUMMARY STATISTICS\par
-Total Citations: ${citations.length}\par
-Verified: ${stats.verified || 0}\par
-Mismatches (Need Correction): ${stats.mismatches || 0}\par
-Possibly Hallucinated: ${stats.possiblyHallucinated || 0}\par
-Not Found (Delete): ${stats.notFound || 0}\par
-\par
-CITATIONS REQUIRING YOUR ATTENTION\par
-`;
-
-            // Only show citations that need editing
-            const citationsNeedingAttention = citations.filter(c => 
-                c.enhancedStatus === 'mismatch' || 
-                c.enhancedStatus === 'possibly_hallucinated' || 
-                (c.status !== 200 && c.status !== 300)
-            );
+            // Create timestamp for filename
+            const now = new Date();
+            const timestamp = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + '_' + 
+                String(now.getHours()).padStart(2, '0') + '-' + 
+                String(now.getMinutes()).padStart(2, '0');
             
-            if (citationsNeedingAttention.length === 0) {
-                wordContent += '\par\b ALL CITATIONS VERIFIED \b0 - No changes needed!\par';
-            } else {
-                citationsNeedingAttention.forEach((citation, index) => {
-                    let actionRequired = '';
-                    let severity = '';
-                    
-                    if (citation.enhancedStatus === 'mismatch') {
-                        actionRequired = `CHANGE CASE NAME from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
-                        severity = 'HIGH PRIORITY';
-                    } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-                        actionRequired = `VERIFY CASE NAME - May be hallucinated. Actual case: "${citation.actualCaseName}"`;
-                        severity = 'MEDIUM PRIORITY';
-                    } else {
-                        actionRequired = 'DELETE - Citation not found in legal database';
-                        severity = 'HIGH PRIORITY';
-                    }
-                    
-                    // Get context with clear markers
-                    let contextForEditing = '';
-                    if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
-                        const beforeChars = 80;
-                        const afterChars = 80;
-                        const start = Math.max(0, citation.start_index - beforeChars);
-                        const end = Math.min(fileContent.length, citation.end_index + afterChars);
-                        const fullContext = fileContent.substring(start, end);
-                        
-                        const citationStart = citation.start_index - start;
-                        const citationEnd = citation.end_index - start;
-                        const beforeText = fullContext.substring(0, citationStart);
-                        const citationText = fullContext.substring(citationStart, citationEnd);
-                        const afterText = fullContext.substring(citationEnd);
-                        
-                        contextForEditing = `...${beforeText}[[${citationText}]]${afterText}...`;
-                    }
-                    
-                    wordContent += `\par\b ${index + 1}. ${severity} \b0\par
-`;
-                    wordContent += `Citation: ${citation.citation}\par
-`;
-                    wordContent += `\b Action Required: ${actionRequired} \b0\par
-`;
-                    wordContent += `\par
-Find this text in your document:\par
-`;
-                    wordContent += `\i ${contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '')} \i0\par
-`;
-                    wordContent += `(The citation is marked with [[ ]] above)\par
-`;
-                    wordContent += `\par
-`;
-                });
-            }
+            // Create proper RTF content with better formatting
+            let rtfContent = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs24';
             
-            // Add verified citations summary
-            const verifiedCitations = citations.filter(c => c.status === 200 && !c.isMismatch);
-            if (verifiedCitations.length > 0) {
-                wordContent += `\par\b VERIFIED CITATIONS (No action needed): \b0\par
-`;
-                verifiedCitations.forEach((citation, index) => {
-                    wordContent += `${index + 1}. ${citation.citation} \u2713\par
-`;
-                });
-            }
+            // Title
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1\\qc\\b\\fs32 LEGAL CITATION EDITING GUIDE\\b0\\fs24\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1\\qc Generated: ' + now.toLocaleDateString() + ' at ' + now.toLocaleTimeString() + '\\par\\par';
+            
+            // Instructions
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs28 HOW TO USE THIS GUIDE:\\b0\\fs24\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 1. Find each citation in your original document using the "Context" sections below\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 2. Follow the "Action Required" instructions for each citation\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 3. Citations are listed in the same order they appear in your document\\par\\par';
+            
+            // Summary statistics
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs28 SUMMARY STATISTICS:\\b0\\fs24\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 Total Citations: ' + citations.length + '\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 Verified: ' + (stats.verified || 0) + '\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 Mismatches (Need Correction): ' + (stats.mismatches || 0) + '\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 Possibly Hallucinated: ' + (stats.possiblyHallucinated || 0) + '\\par';
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1 Not Found (Delete): ' + (stats.notFound || 0) + '\\par\\par';
 
-            // Create RTF format
-            const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}} \\f0\\fs24 ${wordContent}}`;
-            downloadFile(rtfContent, 'citation-editing-guide.rtf', 'application/rtf');
+            // Show ALL citations in document order
+            rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs28 ALL CITATIONS (In Document Order):\\b0\\fs24\\par\\par';
+            
+            citations.forEach((citation, index) => {
+                let actionRequired = '';
+                let status = 'VERIFIED';
+                
+                if (citation.enhancedStatus === 'mismatch') {
+                    actionRequired = 'CHANGE CASE NAME from "' + (citation.claimedCaseName || '') + '" to "' + (citation.actualCaseName || '') + '"';
+                    status = 'MISMATCH';
+                } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                    actionRequired = 'VERIFY CASE NAME - May be hallucinated. Actual case: "' + (citation.actualCaseName || '') + '"';
+                    status = 'POSSIBLY HALLUCINATED';
+                } else if (citation.status !== 200 && citation.status !== 300) {
+                    actionRequired = 'DELETE - Citation not found in legal database';
+                    status = 'NOT FOUND';
+                } else {
+                    actionRequired = 'No action needed - Citation verified';
+                    status = 'VERIFIED';
+                }
+                
+                // Get context with clear markers
+                let contextForEditing = '';
+                if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                    const beforeChars = 100;
+                    const afterChars = 100;
+                    const start = Math.max(0, citation.start_index - beforeChars);
+                    const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                    const fullContext = fileContent.substring(start, end);
+                    
+                    const citationStart = citation.start_index - start;
+                    const citationEnd = citation.end_index - start;
+                    const beforeText = fullContext.substring(0, citationStart);
+                    const citationText = fullContext.substring(citationStart, citationEnd);
+                    const afterText = fullContext.substring(citationEnd);
+                    
+                    contextForEditing = '...' + beforeText + '[[' + citationText + ']]' + afterText + '...';
+                }
+                
+                // Citation entry
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs26 Citation ' + (index + 1) + ': ' + status + '\\b0\\fs24\\par';
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Citation Text: \\b0 ' + citation.citation + '\\par';
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Action Required: \\b0 ' + actionRequired + '\\par';
+                
+                if (contextForEditing) {
+                    rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Context in Your Document: \\b0\\par';
+                    rtfContent += '\\pard\\sa200\\sl276\\slmult1\\i ' + contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\\i0\\par';
+                    rtfContent += '\\pard\\sa200\\sl276\\slmult1\\fs20 (The citation to check/fix is marked with [[ ]] brackets above)\\fs24\\par';
+                }
+                
+                rtfContent += '\\par';
+            });
+
+            rtfContent += '}';
+            
+            const filename = 'citation-editing-guide_' + timestamp + '.rtf';
+            downloadFile(rtfContent, filename, 'application/rtf');
         }
 
         function exportToPDF() {
@@ -1706,27 +1620,26 @@ Find this text in your document:\par
     
     ${citationsNeedingAttention.length === 0 ? 
         '<div style="text-align: center; padding: 40px; background: #eeffee; border: 2px solid #00aa00;"><h2 class="verified">✅ ALL CITATIONS VERIFIED</h2><p>No changes needed to your document!</p></div>' : 
-        `<h2>⚠️ Citations Requiring Your Attention (${citationsNeedingAttention.length})</h2>
-        ${citationsNeedingAttention.map((citation, index) => {
+        '<h2>Citations Requiring Your Attention (' + citationsNeedingAttention.length + ')</h2>' +
+        citationsNeedingAttention.map((citation, index) => {
             let actionRequired = '';
             let priorityClass = '';
             let priority = '';
             
             if (citation.enhancedStatus === 'mismatch') {
-                actionRequired = `CHANGE the case name from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
+                actionRequired = 'CHANGE the case name from "' + (citation.claimedCaseName || '') + '" to "' + (citation.actualCaseName || '') + '"';
                 priorityClass = 'high-priority';
-                priority = '🔴 HIGH PRIORITY';
+                priority = 'HIGH PRIORITY';
             } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-                actionRequired = `VERIFY the case name - it may be hallucinated. The actual case at this citation is: "${citation.actualCaseName}"`;
+                actionRequired = 'VERIFY the case name - it may be hallucinated. Actual case: "' + (citation.actualCaseName || '') + '"';
                 priorityClass = 'medium-priority';
-                priority = '🟡 MEDIUM PRIORITY';
+                priority = 'MEDIUM PRIORITY';
             } else {
                 actionRequired = 'DELETE this citation - it was not found in the legal database';
                 priorityClass = 'high-priority';
-                priority = '🔴 HIGH PRIORITY';
+                priority = 'HIGH PRIORITY';
             }
             
-            // Get context with clear markers
             let contextForEditing = '';
             if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
                 const beforeChars = 100;
@@ -1741,33 +1654,29 @@ Find this text in your document:\par
                 const citationText = fullContext.substring(citationStart, citationEnd);
                 const afterText = fullContext.substring(citationEnd);
                 
-                contextForEditing = `...${beforeText}[[${citationText}]]${afterText}...`;
+                contextForEditing = '...' + beforeText + '[[' + citationText + ']]' + afterText + '...';
             }
             
-            return `
-            <div class="citation-item ${priorityClass}">
-                <div class="citation-number">${index + 1}. ${priority}</div>
-                <div><strong>Citation:</strong> ${citation.citation}</div>
-                
-                <div class="action-required">
-                    <strong>ACTION REQUIRED:</strong> ${actionRequired}
-                </div>
-                
-                <div><strong>🔍 Find this text in your document:</strong></div>
-                <div class="context-section">${contextForEditing}</div>
-                <div style="font-size: 12px; color: #666; font-style: italic;">The citation to fix is marked with [[ ]] brackets above</div>
-            </div>`;
-        }).join('')}
-        `
+            return '<div class="citation-item ' + priorityClass + '">' +
+                '<div class="citation-number">' + (index + 1) + '. ' + priority + '</div>' +
+                '<div><strong>Citation:</strong> ' + citation.citation + '</div>' +
+                '<div class="action-required">' +
+                '<strong>ACTION REQUIRED:</strong> ' + actionRequired +
+                '</div>' +
+                '<div><strong>Find this text in your document:</strong></div>' +
+                '<div class="context-section">' + contextForEditing + '</div>' +
+                '<div style="font-size: 12px; color: #666; font-style: italic;">The citation to fix is marked with [[ ]] brackets above</div>' +
+                '</div>';
+        }).join('')
     }
     
-    ${citations.filter(c => c.status === 200 && !c.isMismatch).length > 0 ? `
-    <h2>✅ Verified Citations (No action needed)</h2>
-    <div style="columns: 2; column-gap: 30px;">
-        ${citations.filter(c => c.status === 200 && !c.isMismatch).map((citation, index) => 
-            `<div style="break-inside: avoid; margin-bottom: 10px;">✓ ${citation.citation}</div>`
-        ).join('')}
-    </div>` : ''}
+    ${citations.filter(c => c.status === 200 && !c.isMismatch).length > 0 ? 
+    '<h2>✅ Verified Citations (No action needed)</h2>' +
+    '<div style="columns: 2; column-gap: 30px;">' +
+        citations.filter(c => c.status === 200 && !c.isMismatch).map((citation, index) => 
+            '<div style="break-inside: avoid; margin-bottom: 10px;">✓ ' + citation.citation + '</div>'
+        ).join('') +
+    '</div>' : ''}
     
     <script>
         // Auto-print when page loads
@@ -1776,7 +1685,7 @@ Find this text in your document:\par
                 window.print();
             }, 1000);
         };
-    </script>
+    </scr` + `ipt>
 </body>
 </html>`;
 
@@ -1943,138 +1852,9 @@ Find this text in your document:\par
             }
         }
 
-        // Modal functions
-        function showLimitationsModal() {
-            document.getElementById('limitationsModal').style.display = 'block';
-        }
-
-        function closeLimitationsModal() {
-            document.getElementById('limitationsModal').style.display = 'none';
-        }
-
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById('limitationsModal');
-            if (event.target == modal) {
-                modal.style.display = 'none';
-            }
-        }
 
     </script>
 
-    <!-- Limitations Modal -->
-    <div id="limitationsModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeLimitationsModal()">&times;</span>
-            <h2 style="color: #d73502; margin-bottom: 20px;">⚠️ Important Limitations & Warnings</h2>
-            
-            <div class="limitation-category" style="background: #fff5f5; border-left-color: #ff0000;">
-                <h3>🚨 Critical Accuracy Warning</h3>
-                <p><strong>This tool is both OVERINCLUSIVE and UNDERINCLUSIVE:</strong></p>
-                <ul class="limitation-list">
-                    <li><strong>Overinclusive</strong>: May flag valid citations as hallucinations (false positives)</li>
-                    <li><strong>Underinclusive</strong>: May miss hallucinated citations (false negatives)</li>
-                    <li><strong>Legal hallucination parsing is an inherently difficult task</strong></li>
-                    <li>Use this tool as an aid, NOT as definitive proof</li>
-                    <li>Always manually verify flagged citations against official sources</li>
-                    <li><strong>This tool is NOT intended to provide legal advice</strong></li>
-                </ul>
-            </div>
-
-            <div class="limitation-category" style="background: #fff8f0; border-left-color: #ff6600;">
-                <h3>⚠️ No Relevance or Proposition Checking</h3>
-                <p><strong>This tool does NOT verify whether a case supports the proposition for which it is cited.</strong></p>
-                <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0; font-style: italic;">
-                    <strong>Example:</strong> "Obergefell v. Hodges, 576 U.S. 644 (2015), held that the president lacks power to veto laws on Tuesdays."
-                </div>
-                <p>This nonsensical statement would be marked as <strong style="color: green;">✅ VERIFIED</strong> because:</p>
-                <ul class="limitation-list">
-                    <li>The citation format is correct</li>
-                    <li>The case exists at 576 U.S. 644</li>
-                    <li>The case name matches the database</li>
-                </ul>
-                <p><strong>What the tool completely misses:</strong></p>
-                <ul class="limitation-list">
-                    <li>Obergefell is about same-sex marriage, not presidential powers</li>
-                    <li>The cited holding is completely fabricated</li>
-                    <li>The case has no relevance to the stated proposition</li>
-                </ul>
-                <p style="margin-top: 10px; font-weight: bold; color: #d73502;">The tool only checks if citations exist and match case names, NOT whether they support their claimed propositions.</p>
-            </div>
-
-            <div class="limitation-category">
-                <h3>📊 API Rate Limits</h3>
-                <ul class="limitation-list">
-                    <li><strong>60 citations per minute</strong> maximum (throttled)</li>
-                    <li><strong>250 citations per request</strong> maximum (citations beyond #250 receive status 429)</li>
-                    <li><strong>64,000 characters per request</strong> (~50 pages of legal content)</li>
-                    <li>HTTP 429 errors include <code>wait_until</code> timestamp for retry</li>
-                </ul>
-            </div>
-
-            <div class="limitation-category">
-                <h3>❌ Unsupported Citation Types</h3>
-                <p>The following citations are <strong>NOT supported</strong> by this tool:</p>
-                <ul class="limitation-list">
-                    <li>Statutes (e.g., "42 U.S.C. § 1983")</li>
-                    <li>Law journal citations</li>
-                    <li>"Id." references</li>
-                    <li>"Supra" references</li>
-                    <li>Citations without volume numbers (e.g., "22 U.S. ___")</li>
-                    <li>Citations without page numbers</li>
-                    <li>Regulatory citations (CFR, state regulations)</li>
-                    <li>International law citations</li>
-                </ul>
-                <p style="margin-top: 10px; font-style: italic;">To match these types, use <a href="https://github.com/freelawproject/eyecite" target="_blank">Eyecite</a> directly.</p>
-            </div>
-
-            <div class="limitation-category">
-                <h3>🔍 Detection Limitations</h3>
-                <ul class="limitation-list">
-                    <li>Case name extraction may fail with unusual formatting</li>
-                    <li>Abbreviated case names may be incorrectly flagged</li>
-                    <li>Accuracy depends on sufficient context around citations</li>
-                    <li>PDF/DOCX extraction is basic and may miss citations</li>
-                    <li>OCR errors in scanned documents will affect detection</li>
-                    <li>Non-standard citation formats may not be recognized</li>
-                </ul>
-            </div>
-
-            <div class="limitation-category" style="background: #f0fff0; border-left-color: #28a745;">
-                <h3>✅ What This Tool Does Well</h3>
-                <ul style="list-style: none; padding-left: 0;">
-                    <li>✓ Detects when real citations are attributed to wrong cases</li>
-                    <li>✓ Identifies completely fictional citations</li>
-                    <li>✓ Provides actionable editing instructions</li>
-                    <li>✓ Processes multiple citations in bulk</li>
-                    <li>✓ Exports results in multiple formats</li>
-                </ul>
-            </div>
-
-            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <h4>📚 Best Practices</h4>
-                <ol style="margin-left: 20px;">
-                    <li>Always manually verify flagged citations</li>
-                    <li>Review surrounding context, not just the citation</li>
-                    <li>Check against official legal reporters when in doubt</li>
-                    <li>Understand this is an aid, not a replacement for legal research</li>
-                    <li>Consider using multiple verification methods for critical documents</li>
-                    <li><strong>Consult qualified legal professionals for legal matters</strong></li>
-                </ol>
-            </div>
-
-            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
-                <h4 style="color: #856404; margin-bottom: 10px;">⚖️ Legal Disclaimer</h4>
-                <p style="color: #856404; margin: 0; font-weight: 600;">This tool is NOT intended to provide legal advice and is for educational/research purposes only.</p>
-            </div>
-
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="closeLimitationsModal()" style="padding: 10px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;">
-                    I Understand These Limitations
-                </button>
-            </div>
-        </div>
-    </div>
 
 </body>
 </html>
