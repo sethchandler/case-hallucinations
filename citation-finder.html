@@ -636,6 +636,50 @@
             }
         }
 
+        /**
+         * Gets a human-readable status label for a citation
+         * @param {Object} citation - Enhanced citation object
+         * @returns {string} Status label (VERIFIED, MISMATCH, POSSIBLY HALLUCINATED, NOT FOUND)
+         */
+        function getStatusLabel(citation) {
+            if (citation.enhancedStatus === 'mismatch') {
+                return 'MISMATCH';
+            } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                return 'POSSIBLY HALLUCINATED';
+            } else if (citation.status !== 200 && citation.status !== 300) {
+                return 'NOT FOUND';
+            } else {
+                return 'VERIFIED';
+            }
+        }
+
+        /**
+         * Prepares citation data for export in a standardized format
+         * @param {Array} citations - Array of enhanced citation objects
+         * @param {Object} stats - Statistics object
+         * @returns {Array} Array of prepared export data objects
+         */
+        function prepareExportData(citations, stats) {
+            return citations.map((citation, index) => ({
+                index: index + 1,
+                citation: citation.citation,
+                status: getStatusLabel(citation),
+                enhancedStatus: citation.enhancedStatus,
+                actionRequired: determineActionRequired(citation),
+                contextForEditing: extractContextWithMarkers(citation, 100, 100),
+                contextShort: extractContextWithMarkers(citation, 80, 80),
+                claimedCaseName: citation.claimedCaseName || 'Not detected',
+                actualCaseName: citation.actualCaseName || 'N/A',
+                originalCitation: citation,
+                // Priority classification for styling
+                priorityClass: citation.enhancedStatus === 'mismatch' || (citation.status !== 200 && citation.status !== 300) 
+                    ? 'high-priority' 
+                    : citation.enhancedStatus === 'possibly_hallucinated' 
+                        ? 'medium-priority' 
+                        : 'verified'
+            }));
+        }
+
         // Save API key to localStorage when changed
         apiKeyInput.addEventListener('change', () => {
             if (apiKeyInput.value) {
@@ -1392,25 +1436,24 @@
 
         function exportToCSV() {
             const citations = window.currentCitations || [];
+            const stats = window.currentStats || {};
             const timestamp = createTimestamp();
+            
+            // Prepare standardized export data
+            const exportData = prepareExportData(citations, stats);
             
             const headers = ['Citation Number', 'Original Citation', 'Status', 'Action Required', 'Claimed Case Name', 'Actual Case Name', 'Context with Markers'];
             const csvContent = [
                 headers.join(','),
-                ...citations.map((citation, index) => {
-                    const actionRequired = determineActionRequired(citation);
-                    const contextWithMarkers = extractContextWithMarkers(citation, 80, 80);
-                    
-                    return [
-                        `"${index + 1}"`,
-                        `"${citation.citation}"`,
-                        `"${citation.enhancedStatus}"`,
-                        `"${actionRequired}"`,
-                        `"${citation.claimedCaseName || 'Not detected'}"`,
-                        `"${citation.actualCaseName || 'N/A'}"`,
-                        `"${contextWithMarkers.replace(/"/g, '""')}"`  // Escape quotes in context
-                    ].join(',');
-                })
+                ...exportData.map(item => [
+                    `"${item.index}"`,
+                    `"${item.citation}"`,
+                    `"${item.status}"`,
+                    `"${item.actionRequired}"`,
+                    `"${item.claimedCaseName}"`,
+                    `"${item.actualCaseName}"`,
+                    `"${item.contextShort.replace(/"/g, '""')}"`  // Escape quotes in context
+                ].join(','))
             ].join('\n');
 
             const filename = 'citation-editing-guide_' + timestamp + '.csv';
@@ -1419,38 +1462,36 @@
 
         function exportToJSON() {
             const citations = window.currentCitations || [];
+            const stats = window.currentStats || {};
+            
+            // Prepare standardized export data
+            const preparedData = prepareExportData(citations, stats);
             
             const exportData = {
                 exportDate: new Date().toISOString(),
                 totalCitations: citations.length,
-                stats: window.currentStats || {},
+                stats: stats,
                 editingInstructions: "Use the 'contextWithMarkings' field to locate and fix citations in your original document. Look for [CITATION_START] and [CITATION_END] markers.",
-                citationsForEditing: citations.map((citation, index) => {
-                    // Get context with position markers for editing
-                    const contextWithMarkings = extractContextWithMarkers(citation, 100, 100, '[CITATION_START]', '[CITATION_END]').replace(/^\.\.\.|\.\.\.$/g, '');
+                citationsForEditing: preparedData.map(item => {
+                    // Get context with JSON-specific markers
+                    const contextWithMarkings = extractContextWithMarkers(item.originalCitation, 100, 100, '[CITATION_START]', '[CITATION_END]').replace(/^\.\.\.|\.\.\.$/g, '');
                     
                     const result = {
-                        citationNumber: index + 1,
-                        originalCitation: citation.citation,
-                        status: citation.enhancedStatus,
+                        citationNumber: item.index,
+                        originalCitation: item.citation,
+                        status: item.status,
                         contextWithMarkings: contextWithMarkings,
-                        editingAction: null,
-                        claimedCaseName: citation.claimedCaseName || 'Not detected',
-                        actualCaseName: citation.actualCaseName || 'Not found'
+                        editingAction: item.actionRequired,
+                        claimedCaseName: item.claimedCaseName,
+                        actualCaseName: item.actualCaseName
                     };
                     
-                    // Provide specific editing instructions
-                    if (citation.enhancedStatus === 'mismatch') {
-                        result.editingAction = `REPLACE: Change case name from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
-                        result.severity = 'HIGH - Citation exists but wrong case name';
-                    } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-                        result.editingAction = `VERIFY: Could not extract case name from text. Citation may be hallucinated. Actual case: "${citation.actualCaseName}"`;
+                    // Add severity based on priority class
+                    if (item.priorityClass === 'high-priority') {
+                        result.severity = item.status === 'MISMATCH' ? 'HIGH - Citation exists but wrong case name' : 'HIGH - Invalid citation';
+                    } else if (item.priorityClass === 'medium-priority') {
                         result.severity = 'MEDIUM - Possibly hallucinated';
-                    } else if (citation.status !== 200 && citation.status !== 300) {
-                        result.editingAction = 'DELETE: Citation not found in legal database';
-                        result.severity = 'HIGH - Invalid citation';
                     } else {
-                        result.editingAction = 'VERIFIED: Citation is correct';
                         result.severity = 'OK';
                     }
                     
@@ -1475,10 +1516,14 @@
             const stats = window.currentStats || {};
             const timestamp = createTimestamp();
             
+            // Prepare standardized export data
+            const exportData = prepareExportData(citations, stats);
+            
             // Create proper RTF content with better formatting
             let rtfContent = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs24';
             
             // Title
+            const now = new Date();
             rtfContent += '\\pard\\sa200\\sl276\\slmult1\\qc\\b\\fs32 LEGAL CITATION EDITING GUIDE\\b0\\fs24\\par';
             rtfContent += '\\pard\\sa200\\sl276\\slmult1\\qc Generated: ' + now.toLocaleDateString() + ' at ' + now.toLocaleTimeString() + '\\par\\par';
             
@@ -1499,29 +1544,15 @@
             // Show ALL citations in document order
             rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs28 ALL CITATIONS (In Document Order):\\b0\\fs24\\par\\par';
             
-            citations.forEach((citation, index) => {
-                const actionRequired = determineActionRequired(citation);
-                let status = 'VERIFIED';
-                
-                if (citation.enhancedStatus === 'mismatch') {
-                    status = 'MISMATCH';
-                } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-                    status = 'POSSIBLY HALLUCINATED';
-                } else if (citation.status !== 200 && citation.status !== 300) {
-                    status = 'NOT FOUND';
-                }
-                
-                // Get context with clear markers
-                const contextForEditing = extractContextWithMarkers(citation, 100, 100);
-                
+            exportData.forEach(item => {
                 // Citation entry
-                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs26 Citation ' + (index + 1) + ': ' + status + '\\b0\\fs24\\par';
-                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Citation Text: \\b0 ' + citation.citation + '\\par';
-                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Action Required: \\b0 ' + actionRequired + '\\par';
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b\\fs26 Citation ' + item.index + ': ' + item.status + '\\b0\\fs24\\par';
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Citation Text: \\b0 ' + item.citation + '\\par';
+                rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Action Required: \\b0 ' + item.actionRequired + '\\par';
                 
-                if (contextForEditing) {
+                if (item.contextForEditing) {
                     rtfContent += '\\pard\\sa200\\sl276\\slmult1\\b Context in Your Document: \\b0\\par';
-                    rtfContent += '\\pard\\sa200\\sl276\\slmult1\\i ' + contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\\i0\\par';
+                    rtfContent += '\\pard\\sa200\\sl276\\slmult1\\i ' + item.contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\\i0\\par';
                     rtfContent += '\\pard\\sa200\\sl276\\slmult1\\fs20 (The citation to check/fix is marked with [[ ]] brackets above)\\fs24\\par';
                 }
                 
@@ -1538,6 +1569,9 @@
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
             const timestamp = createTimestamp();
+            
+            // Prepare standardized export data
+            const exportData = prepareExportData(citations, stats);
             
             // Create Markdown content
             let markdownContent = '# Legal Citation Editing Guide\n\n';
@@ -1561,29 +1595,15 @@
             // Show ALL citations in document order
             markdownContent += '## All Citations (In Document Order)\n\n';
             
-            citations.forEach((citation, index) => {
-                const actionRequired = determineActionRequired(citation);
-                let status = 'VERIFIED';
-                
-                if (citation.enhancedStatus === 'mismatch') {
-                    status = 'MISMATCH';
-                } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-                    status = 'POSSIBLY HALLUCINATED';
-                } else if (citation.status !== 200 && citation.status !== 300) {
-                    status = 'NOT FOUND';
-                }
-                
-                // Get context with clear markers
-                const contextForEditing = extractContextWithMarkers(citation, 100, 100);
-                
+            exportData.forEach(item => {
                 // Citation entry
-                markdownContent += '### Citation ' + (index + 1) + ': ' + status + '\n\n';
-                markdownContent += '**Citation Text:** ' + citation.citation + '\n\n';
-                markdownContent += '**Action Required:** ' + actionRequired + '\n\n';
+                markdownContent += '### Citation ' + item.index + ': ' + item.status + '\n\n';
+                markdownContent += '**Citation Text:** ' + item.citation + '\n\n';
+                markdownContent += '**Action Required:** ' + item.actionRequired + '\n\n';
                 
-                if (contextForEditing) {
+                if (item.contextForEditing) {
                     markdownContent += '**Context in Your Document:**\n\n';
-                    markdownContent += '```\n' + contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\n```\n\n';
+                    markdownContent += '```\n' + item.contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\n```\n\n';
                     markdownContent += '*(The citation to check/fix is marked with [[ ]] brackets above)*\n\n';
                 }
                 
@@ -1598,6 +1618,9 @@
             // Create a properly structured HTML document for PDF export
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
+            
+            // Prepare standardized export data
+            const exportData = prepareExportData(citations, stats);
             
             const printHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -1723,37 +1746,16 @@
     </div>
     
     <h2>All Citations (In Document Order)</h2>
-    ${citations.map((citation, index) => {
-        const actionRequired = determineActionRequired(citation);
-        let status = 'VERIFIED';
-        let priorityClass = '';
-        
-        if (citation.enhancedStatus === 'mismatch') {
-            status = 'MISMATCH';
-            priorityClass = 'high-priority';
-        } else if (citation.enhancedStatus === 'possibly_hallucinated') {
-            status = 'POSSIBLY HALLUCINATED';
-            priorityClass = 'medium-priority';
-        } else if (citation.status !== 200 && citation.status !== 300) {
-            status = 'NOT FOUND';
-            priorityClass = 'high-priority';
-        } else {
-            status = 'VERIFIED';
-            priorityClass = 'verified';
-        }
-        
-        // Get context with clear markers
-        const contextForEditing = extractContextWithMarkers(citation, 100, 100);
-        
-        return '<div class="citation-item ' + priorityClass + '">' +
-            '<div class="citation-number">Citation ' + (index + 1) + ': ' + status + '</div>' +
-            '<div><strong>Citation Text:</strong> ' + citation.citation + '</div>' +
+    ${exportData.map(item => {
+        return '<div class="citation-item ' + item.priorityClass + '">' +
+            '<div class="citation-number">Citation ' + item.index + ': ' + item.status + '</div>' +
+            '<div><strong>Citation Text:</strong> ' + item.citation + '</div>' +
             '<div class="action-required">' +
-            '<strong>Action Required:</strong> ' + actionRequired +
+            '<strong>Action Required:</strong> ' + item.actionRequired +
             '</div>' +
-            (contextForEditing ? 
+            (item.contextForEditing ? 
                 '<div><strong>Context in Your Document:</strong></div>' +
-                '<div class="context-section">' + contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '</div>' +
+                '<div class="context-section">' + item.contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '</div>' +
                 '<div style="font-size: 12px; color: #666; font-style: italic;">(The citation to check/fix is marked with [[ ]] brackets above)</div>' 
                 : '') +
             '</div>';
