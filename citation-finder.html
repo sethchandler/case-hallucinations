@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Citation Finder - Powered by Eyecite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .main-content.analysis-complete {
+            grid-template-columns: 1fr;
+        }
+
+        .upload-section.collapsed {
+            display: none;
+        }
+
+        .upload-summary {
+            display: none;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .upload-summary.visible {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .results-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+        }
+
+        .upload-section h2, .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9ff;
+        }
+
+        .file-upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .file-upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .text-preview {
+            background: #f5f5f5;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .results-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .citation-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .citation-item:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            transform: translateX(3px);
+        }
+
+        .analysis-complete .citation-item {
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .citation-text {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .citation-normalized {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+
+        .citation-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-multiple {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-mismatch {
+            background: #ffe0b3;
+            color: #d84315;
+            font-weight: 600;
+        }
+
+        .status-possibly-hallucinated {
+            background: #ffeaa7;
+            color: #d63031;
+            font-weight: 600;
+        }
+
+        .citation-mismatch {
+            border-left-color: #ff9800 !important;
+            background: #fffbf0;
+        }
+
+        .export-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            border: 1px solid #e3e8ff;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .export-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .export-btn.csv {
+            background: #28a745;
+            color: white;
+        }
+
+        .export-btn.word {
+            background: #2b579a;
+            color: white;
+        }
+
+        .export-btn.pdf {
+            background: #dc3545;
+            color: white;
+        }
+
+        .export-btn.json {
+            background: #6f42c1;
+            color: white;
+        }
+
+        .print-options {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .print-checkbox {
+            margin-right: 15px;
+        }
+
+        .citation-possibly-hallucinated {
+            border-left-color: #fd7e14 !important;
+            background: #fff8f0;
+        }
+
+        .case-info {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .case-name {
+            color: #2c5282;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .case-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover,
+        .close-modal:focus {
+            color: #000;
+        }
+
+        .warning-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .warning-btn:hover {
+            transform: translateY(-2px);
+            animation: none;
+        }
+
+        .limitations-section {
+            margin: 20px 0;
+        }
+
+        .limitation-category {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .limitation-category h3 {
+            color: #d73502;
+            margin-bottom: 10px;
+        }
+
+        .limitation-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .limitation-list li {
+            padding: 5px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .limitation-list li:before {
+            content: "⚠️";
+            position: absolute;
+            left: 0;
+        }
+
+        .warning-banner {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-banner-icon {
+            font-size: 2rem;
+        }
+
+        .warning-banner-content {
+            flex: 1;
+        }
+
+        .warning-banner-title {
+            font-weight: bold;
+            color: #d73502;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Legal Citation Finder</h1>
+            <p>Upload a text file to extract and verify legal citations using CourtListener's Eyecite API</p>
+            <button class="warning-btn" onclick="showLimitationsModal()" style="margin-top: 15px;">
+                ⚠️ IMPORTANT: Limitations & Warnings
+            </button>
+        </div>
+
+        <!-- Warning Banner -->
+        <div class="warning-banner">
+            <div class="warning-banner-icon">⚠️</div>
+            <div class="warning-banner-content">
+                <div class="warning-banner-title">Critical Notice</div>
+                <div>This tool is both overinclusive (false positives) and underinclusive (false negatives). Legal hallucination detection is inherently difficult. Always manually verify results.</div>
+            </div>
+            <button onclick="showLimitationsModal()" style="padding: 8px 15px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                View All Limitations
+            </button>
+        </div>
+
+        <!-- Collapsed upload summary (hidden by default) -->
+        <div class="upload-summary" id="uploadSummary">
+            <div>
+                <strong>📄 File:</strong> <span id="summaryFileName">-</span>
+                <span style="margin-left: 15px; color: #666;">
+                    <strong>API:</strong> <span id="summaryApiStatus">Connected</span>
+                </span>
+            </div>
+            <button onclick="showUploadSection()" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                Change File
+            </button>
+        </div>
+
+        <div class="card api-config" id="apiConfig" style="margin-bottom: 20px;">
+            <h3>API Configuration</h3>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
+                <div>
+                    <label for="apiKey" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 0.9rem;">
+                        CourtListener API Key
+                    </label>
+                    <input type="password" id="apiKey" placeholder="Enter your API key" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                </div>
+                <div style="font-size: 0.8rem; color: #666;">
+                    <a href="https://www.courtlistener.com/sign-in/" target="_blank" style="color: #667eea;">Get free API key</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="card upload-section" id="uploadSection">
+                <h2>Upload Document</h2>
+                <div class="file-upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p><strong>Click to upload or drag & drop</strong></p>
+                    <p style="margin-top: 10px; color: #666;">Supports .txt, .md, .pdf, .docx files up to 64,000 characters</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".txt,.md,.pdf,.docx">
+                </div>
+                
+                <div id="fileInfo" style="display: none;">
+                    <p style="margin-top: 15px; color: #666;">
+                        <strong>Selected file:</strong> <span id="fileName"></span>
+                    </p>
+                    <div class="text-preview" id="textPreview"></div>
+                </div>
+
+                <button class="btn" id="analyzeBtn" disabled>
+                    Analyze Citations
+                </button>
+            </div>
+
+            <div class="card results-section" id="resultsSection">
+                <h2>Citation Analysis</h2>
+                <div id="resultsContainer">
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🔍</div>
+                        <p>Upload a document to begin citation analysis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="statsCard" style="display: none;">
+            <div class="stats" id="statsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let fileContent = '';
+        
+        const apiKeyInput = document.getElementById('apiKey');
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const textPreview = document.getElementById('textPreview');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const statsCard = document.getElementById('statsCard');
+        const statsContainer = document.getElementById('statsContainer');
+
+        // Load API key from localStorage if available
+        const savedApiKey = localStorage.getItem('courtlistener_api_key') || '84c32604049750c1d43a745744fd28563d21334e';
+        if (savedApiKey) {
+            apiKeyInput.value = savedApiKey;
+        }
+
+        // Save API key to localStorage when changed
+        apiKeyInput.addEventListener('change', () => {
+            if (apiKeyInput.value) {
+                localStorage.setItem('courtlistener_api_key', apiKeyInput.value);
+            }
+        });
+
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Function to extract text from different file types
+        async function extractTextFromFile(file) {
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.txt') || fileName.endsWith('.md')) {
+                // Handle text and markdown files
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('Failed to read text file'));
+                    reader.readAsText(file);
+                });
+            }
+            
+            if (fileName.endsWith('.pdf')) {
+                // Handle PDF files - Basic implementation
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            // For now, provide a placeholder message for PDF support
+                            // In a real implementation, you'd use PDF.js library
+                            const arrayBuffer = e.target.result;
+                            const uint8Array = new Uint8Array(arrayBuffer);
+                            
+                            // Simple text extraction attempt - look for readable text patterns
+                            let text = '';
+                            const decoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: false });
+                            const rawText = decoder.decode(uint8Array);
+                            
+                            // Extract potential legal citations using regex
+                            const citationMatches = rawText.match(/\d+\s+U\.S\.\s+\d+|\d+\s+F\.\d*d?\s+\d+|\d+\s+S\.Ct\.\s+\d+/g);
+                            
+                            if (citationMatches && citationMatches.length > 0) {
+                                text = `PDF Content (Basic Extraction)\n\nDetected potential citations:\n${citationMatches.slice(0, 20).join('\n')}\n\nNote: This is a basic PDF extraction. For full PDF support, please convert to text format first.`;
+                            } else {
+                                text = 'PDF Content (Basic Extraction)\n\nNo clear legal citations detected in this PDF using basic extraction methods.\n\nNote: For best results with PDF files, please convert to .txt format first using your preferred PDF viewer.';
+                            }
+                            
+                            resolve(text);
+                        } catch (error) {
+                            reject(new Error('Failed to extract text from PDF. Please convert to .txt format first.'));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('Failed to read PDF file'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            
+            if (fileName.endsWith('.docx')) {
+                // Handle DOCX files - Basic implementation
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            // Basic DOCX handling - look for XML content
+                            const arrayBuffer = e.target.result;
+                            const uint8Array = new Uint8Array(arrayBuffer);
+                            
+                            // Simple approach: treat as ZIP and look for readable text
+                            const decoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: false });
+                            const rawText = decoder.decode(uint8Array);
+                            
+                            // Look for legal citations in the raw content
+                            const citationMatches = rawText.match(/\d+\s+U\.S\.\s+\d+|\d+\s+F\.\d*d?\s+\d+|\d+\s+S\.Ct\.\s+\d+/g);
+                            
+                            let text = '';
+                            if (citationMatches && citationMatches.length > 0) {
+                                text = `DOCX Content (Basic Extraction)\n\nDetected potential citations:\n${citationMatches.slice(0, 20).join('\n')}\n\nNote: This is a basic DOCX extraction. For full document support, please save as .txt format first.`;
+                            } else {
+                                text = 'DOCX Content (Basic Extraction)\n\nNo clear legal citations detected in this DOCX using basic extraction methods.\n\nNote: For best results with DOCX files, please save as .txt format first from Word.';
+                            }
+                            
+                            resolve(text);
+                        } catch (error) {
+                            reject(new Error('Failed to extract text from DOCX. Please save as .txt format first.'));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('Failed to read DOCX file'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            
+            throw new Error('Unsupported file type');
+        }
+
+        function handleFile(file) {
+            const supportedExtensions = ['.txt', '.md', '.pdf', '.docx'];
+            const hasValidExtension = supportedExtensions.some(ext => 
+                file.name.toLowerCase().endsWith(ext)
+            );
+            
+            if (!hasValidExtension) {
+                showError('Please upload a .txt, .md, .pdf, or .docx file');
+                return;
+            }
+
+            fileName.textContent = file.name;
+            
+            // Extract text based on file type
+            extractTextFromFile(file).then(extractedText => {
+                fileContent = extractedText;
+                
+                if (fileContent.length > 64000) {
+                    showError('File is too large. Maximum 64,000 characters allowed.');
+                    return;
+                }
+                
+                textPreview.textContent = fileContent.substring(0, 500) + 
+                    (fileContent.length > 500 ? '...' : '');
+                fileInfo.style.display = 'block';
+                analyzeBtn.disabled = false;
+            }).catch(error => {
+                showError('Error reading file: ' + error.message);
+            });
+        }
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (!fileContent) {
+                showError('No file content to analyze');
+                return;
+            }
+
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showError('Please enter your CourtListener API key');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+            
+            resultsContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Extracting citations...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('https://www.courtlistener.com/api/rest/v3/citation-lookup/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Token ${apiKey}`
+                    },
+                    body: 'text=' + encodeURIComponent(fileContent)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Invalid API key. Please check your credentials.');
+                    } else if (response.status === 429) {
+                        throw new Error('Rate limit exceeded. Please try again later.');
+                    } else {
+                        throw new Error(`API request failed: ${response.status}`);
+                    }
+                }
+
+                const data = await response.json();
+                console.log('API Response:', data);  // Debug logging
+                displayResults(data);
+                
+                // Switch to analysis-complete layout
+                switchToAnalysisLayout();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to analyze citations. ' + error.message);
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze Citations';
+            }
+        });
+
+        // Extract ONLY the case name from citation text or context
+        function extractCaseName(citationText, contextText = '') {
+            console.log('Extracting case name from citation:', citationText);
+            console.log('Using context:', contextText);
+            
+            // Strategy 1: Look for case names in the context text around the citation
+            if (contextText) {
+                const caseNamePatterns = [
+                    // "Name v. Name" pattern - most common
+                    /\b([A-Z][a-zA-Z'\s]+\s+v\.?\s+[A-Z][a-zA-Z'\s&]+?)\s*,/g,
+                    // "In re Name" pattern
+                    /\b(In re\s+[A-Z][a-zA-Z'\s&]+?)\s*,/g,
+                    // "Ex parte Name" pattern  
+                    /\b(Ex parte\s+[A-Z][a-zA-Z'\s&]+?)\s*,/g,
+                    // More flexible "Name v. Name" without comma requirement
+                    /\b([A-Z][a-zA-Z'\s]+\s+v\.?\s+[A-Z][a-zA-Z'\s&]+?)(?=\s*\d|\s*\()/g
+                ];
+                
+                for (const pattern of caseNamePatterns) {
+                    const matches = Array.from(contextText.matchAll(pattern));
+                    for (const match of matches) {
+                        if (match[1]) {
+                            const caseName = cleanCaseName(match[1]);
+                            if (isValidCaseName(caseName)) {
+                                console.log('Context extraction found:', caseName);
+                                return caseName;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Strategy 2: Try to extract from the citation text itself
+            const directPatterns = [
+                // "Name v. Name, citation" format
+                /^([A-Z][a-zA-Z'\s]+\s+v\.?\s+[A-Z][a-zA-Z'\s&]+?)\s*,/i,
+                // "In re Name, citation" format
+                /^(In re\s+[A-Z][a-zA-Z'\s&]+?)\s*,/i,
+                // "Ex parte Name, citation" format
+                /^(Ex parte\s+[A-Z][a-zA-Z'\s&]+?)\s*,/i,
+                // "Name v. Name (citation)" format
+                /^([A-Z][a-zA-Z'\s]+\s+v\.?\s+[A-Z][a-zA-Z'\s&]+?)\s*\(/i
+            ];
+            
+            for (const pattern of directPatterns) {
+                const match = citationText.match(pattern);
+                if (match && match[1]) {
+                    const caseName = cleanCaseName(match[1]);
+                    if (isValidCaseName(caseName)) {
+                        console.log('Direct extraction found:', caseName);
+                        return caseName;
+                    }
+                }
+            }
+            
+            console.log('Could not extract case name');
+            return null;
+        }
+        
+        // Validate that extracted text looks like a real case name
+        function isValidCaseName(name) {
+            if (!name || name.length < 5) return false;
+            
+            // Must contain "v." or "v " or "In re" or "Ex parte"
+            if (!/\s+v\.?\s+|^In re\s+|^Ex parte\s+/i.test(name)) return false;
+            
+            // Should not contain citation-like patterns
+            if (/\d+\s+(U\.S\.|F\.|S\.Ct\.|L\.Ed)/i.test(name)) return false;
+            
+            // Should not be too long (avoid picking up whole sentences)
+            if (name.length > 80) return false;
+            
+            return true;
+        }
+        
+        // Helper function to escape regex special characters
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        // Helper function to clean extracted case names
+        function cleanCaseName(name) {
+            if (!name) return null;
+            
+            return name
+                .replace(/^\s*["'`]/g, '')  // Remove leading quotes
+                .replace(/["'`]\s*$/g, '')  // Remove trailing quotes
+                .replace(/\s*,\s*$/, '')    // Remove trailing comma
+                .replace(/\s*\.\s*$/, '')   // Remove trailing period
+                .replace(/\s+/g, ' ')       // Normalize whitespace
+                .trim();
+        }
+
+        // Normalize case names for comparison
+        function normalizeCaseName(name) {
+            if (!name) return '';
+            return name
+                .toLowerCase()
+                .replace(/\s+/g, ' ')
+                .replace(/\bv\.?\s*/g, 'v ')
+                .replace(/\bet al\.?/g, '')
+                .replace(/[,.\s]+$/, '')
+                .trim();
+        }
+
+        // Check if case names match
+        function caseNamesMatch(claimed, actual) {
+            if (!claimed || !actual) return false;
+            
+            const normalizedClaimed = normalizeCaseName(claimed);
+            const normalizedActual = normalizeCaseName(actual);
+            
+            // Check for exact match
+            if (normalizedClaimed === normalizedActual) return true;
+            
+            // Check if one contains the other (for partial matches)
+            if (normalizedActual.includes(normalizedClaimed) || 
+                normalizedClaimed.includes(normalizedActual)) return true;
+            
+            // Check for significant overlap (at least 70% of words match)
+            const claimedWords = normalizedClaimed.split(' ');
+            const actualWords = normalizedActual.split(' ');
+            const commonWords = claimedWords.filter(word => 
+                actualWords.includes(word) && word.length > 2
+            );
+            
+            return commonWords.length / Math.min(claimedWords.length, actualWords.length) > 0.7;
+        }
+
+        function displayResults(data) {
+            // The API returns an array directly, not an object with citations property
+            const citations = Array.isArray(data) ? data : (data.citations || []);
+            
+            if (!citations || citations.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
+                        <p>No citations found in the document</p>
+                    </div>
+                `;
+                statsCard.style.display = 'none';
+                return;
+            }
+
+            // Enhance citations with hallucination detection
+            const enhancedCitations = citations.map(citation => {
+                // Extract original text using span data if available
+                let originalText = citation.citation;
+                let contextText = '';
+                if (citation.start_index !== undefined && citation.end_index !== undefined) {
+                    // Get text from 100 chars before to 100 chars after for better context
+                    const start = Math.max(0, citation.start_index - 100);
+                    const end = Math.min(fileContent.length, citation.end_index + 100);
+                    contextText = fileContent.substring(start, end);
+                    
+                    // Extract the actual citation from the original text
+                    const actualStart = citation.start_index - start;
+                    const actualEnd = citation.end_index - start;
+                    originalText = contextText.substring(actualStart, actualEnd);
+                    
+                    console.log('Context text (±100 chars):', contextText);
+                    console.log('Original citation text:', originalText);
+                }
+                
+                const claimedCaseName = extractCaseName(originalText, contextText);
+                const actualCaseName = citation.clusters && citation.clusters[0] 
+                    ? citation.clusters[0].case_name 
+                    : null;
+                
+                let enhancedStatus = citation.status;
+                let isMismatch = false;
+                
+                // Log for debugging
+                console.log('API Citation:', citation.citation);
+                console.log('Original Text:', originalText);
+                console.log('Claimed case name:', claimedCaseName);
+                console.log('Actual case name:', actualCaseName);
+                console.log('Status:', citation.status);
+                
+                if (citation.status === 200) {
+                    if (claimedCaseName && actualCaseName) {
+                        if (!caseNamesMatch(claimedCaseName, actualCaseName)) {
+                            isMismatch = true;
+                            enhancedStatus = 'mismatch';
+                            console.log('MISMATCH DETECTED!');
+                        }
+                    } else if (!claimedCaseName && actualCaseName) {
+                        // Could not extract case name - possibly hallucinated
+                        enhancedStatus = 'possibly_hallucinated';
+                        console.log('POSSIBLY HALLUCINATED - could not extract case name');
+                    }
+                }
+                
+                return {
+                    ...citation,
+                    originalText,
+                    contextText,
+                    claimedCaseName,
+                    actualCaseName,
+                    enhancedStatus,
+                    isMismatch
+                };
+            });
+
+            // Display statistics
+            const stats = calculateEnhancedStats(enhancedCitations);
+            
+            // Store data globally for export functions
+            window.currentCitations = enhancedCitations;
+            window.currentStats = stats;
+            
+            statsCard.style.display = 'block';
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-number">${stats.total}</div>
+                    <div class="stat-label">Total Citations</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" style="color: #28a745;">${stats.verified}</div>
+                    <div class="stat-label">Verified</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" style="color: #ff9800;">${stats.mismatches}</div>
+                    <div class="stat-label">Mismatches</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" style="color: #fd7e14;">${stats.possiblyHallucinated}</div>
+                    <div class="stat-label">Possibly Hallucinated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" style="color: #ffc107;">${stats.multiple}</div>
+                    <div class="stat-label">Ambiguous</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" style="color: #dc3545;">${stats.notFound}</div>
+                    <div class="stat-label">Not Found</div>
+                </div>
+            `;
+
+            // Add hallucination summary if any were detected
+            const hallucinations = enhancedCitations.filter(c => 
+                c.isMismatch || c.enhancedStatus === 'possibly_hallucinated' || (c.status !== 200 && c.status !== 300)
+            );
+            
+            let summaryHTML = '';
+            if (hallucinations.length > 0) {
+                summaryHTML = `
+                    <div class="card" style="margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ff9800;">
+                        <h3 style="color: #856404; margin-bottom: 15px;">⚠️ Potential Hallucinations Detected</h3>
+                        <p style="color: #856404; margin-bottom: 10px;">
+                            Found ${hallucinations.length} potential hallucination${hallucinations.length > 1 ? 's' : ''} in the document:
+                        </p>
+                        <ul style="color: #856404; margin-left: 20px;">
+                            ${stats.mismatches > 0 ? `<li>${stats.mismatches} citation${stats.mismatches > 1 ? 's' : ''} exist but are attributed to wrong cases</li>` : ''}
+                            ${stats.possiblyHallucinated > 0 ? `<li>${stats.possiblyHallucinated} citation${stats.possiblyHallucinated > 1 ? 's' : ''} may have hallucinated case names (extraction failed)</li>` : ''}
+                            ${stats.notFound > 0 ? `<li>${stats.notFound} citation${stats.notFound > 1 ? 's' : ''} do not exist</li>` : ''}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Add simplified context controls
+            const contextControlsHTML = `
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 20px; color: #333;">🔍 Context Inspector</h3>
+                    <div style="display: grid; grid-template-columns: auto 1fr auto auto 1fr auto; gap: 15px; align-items: center; margin-bottom: 20px;">
+                        <label style="font-weight: 600; white-space: nowrap;">Before:</label>
+                        <input type="range" id="global-before-slider" min="0" max="200" value="100" 
+                            style="width: 100%;" oninput="updateAllContexts()">
+                        <span id="global-before-count" style="font-weight: 600; color: #667eea; min-width: 35px;">100</span>
+                        
+                        <label style="font-weight: 600; white-space: nowrap;">After:</label>
+                        <input type="range" id="global-after-slider" min="0" max="200" value="100" 
+                            style="width: 100%;" oninput="updateAllContexts()">
+                        <span id="global-after-count" style="font-weight: 600; color: #667eea; min-width: 35px;">100</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <button onclick="toggleAllContexts()" id="toggle-contexts-btn" 
+                            style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+                            Show Context for All Citations
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Export section HTML
+            const exportHTML = `
+                <div class="export-section">
+                    <h3>📄 Export Results</h3>
+                    <p>Download actionable editing guides to fix citations in your original document:</p>
+                    <ul style="font-size: 0.9rem; color: #666; margin: 10px 0;">
+                        <li><strong>JSON:</strong> Structured data with context markers for automated processing</li>
+                        <li><strong>Word (RTF):</strong> Human-readable editing instructions (opens in Word/LibreOffice)</li>
+                        <li><strong>PDF:</strong> Print-friendly editing guide with highlighted problem areas</li>
+                        <li><strong>CSV:</strong> Spreadsheet format for bulk analysis</li>
+                    </ul>
+                    <div class="print-options">
+                        <label class="print-checkbox">
+                            <input type="checkbox" id="printFriendly" checked>
+                            Print-friendly format (uses symbols instead of colors)
+                        </label>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="export-btn csv" onclick="exportToCSV()">
+                            📊 CSV Data
+                        </button>
+                        <button class="export-btn word" onclick="exportToWord()">
+                            📝 Word Compatible (RTF)
+                        </button>
+                        <button class="export-btn pdf" onclick="exportToPDF()">
+                            📄 PDF Report
+                        </button>
+                        <button class="export-btn json" onclick="exportToJSON()">
+                            🔧 JSON Data
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Display individual citations
+            resultsContainer.innerHTML = summaryHTML + contextControlsHTML + '<div class="results-container">' +
+                enhancedCitations.map(citation => createEnhancedCitationHTML(citation)).join('') +
+                '</div>' + exportHTML;
+        }
+
+        function calculateEnhancedStats(citations) {
+            const stats = {
+                total: citations.length,
+                verified: 0,
+                mismatches: 0,
+                possiblyHallucinated: 0,
+                notFound: 0,
+                multiple: 0
+            };
+            
+            citations.forEach(c => {
+                if (c.enhancedStatus === 'mismatch') {
+                    stats.mismatches++;
+                } else if (c.enhancedStatus === 'possibly_hallucinated') {
+                    stats.possiblyHallucinated++;
+                } else if (c.status === 200) {
+                    stats.verified++;
+                } else if (c.status === 300) {
+                    stats.multiple++;
+                } else {
+                    stats.notFound++;
+                }
+            });
+            
+            return stats;
+        }
+
+        function calculateStats(citations) {
+            return {
+                total: citations.length,
+                found: citations.filter(c => c.status === 200).length,
+                multiple: citations.filter(c => c.status === 300).length,
+                notFound: citations.filter(c => c.status !== 200 && c.status !== 300).length
+            };
+        }
+
+        function createEnhancedCitationHTML(citation) {
+            let statusClass = 'status-error';
+            let statusText = 'Not Found';
+            let statusIcon = '❌';
+            
+            if (citation.enhancedStatus === 'mismatch') {
+                statusClass = 'status-mismatch';
+                statusText = 'Citation Mismatch';
+                statusIcon = '⚠️';
+            } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                statusClass = 'status-possibly-hallucinated';
+                statusText = 'Possibly Hallucinated';
+                statusIcon = '❓';
+            } else if (citation.status === 200) {
+                statusClass = 'status-success';
+                statusText = 'Verified';
+                statusIcon = '✅';
+            } else if (citation.status === 300) {
+                statusClass = 'status-multiple';
+                statusText = 'Multiple Matches';
+                statusIcon = '🔍';
+            }
+
+            let cssClass = '';
+            if (citation.isMismatch) {
+                cssClass = 'citation-mismatch';
+            } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                cssClass = 'citation-possibly-hallucinated';
+            }
+
+            let html = `
+                <div class="citation-item ${cssClass}">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div class="citation-text">
+                                ${statusIcon} "${citation.citation}"
+                            </div>
+            `;
+
+            if (citation.normalized_citations && citation.normalized_citations.length > 0) {
+                html += `<div class="citation-normalized">Normalized: ${citation.normalized_citations.join(', ')}</div>`;
+            }
+
+            // Show case name comparison for all found cases
+            if (citation.status === 200 && citation.claimedCaseName && citation.actualCaseName) {
+                if (citation.isMismatch) {
+                    // Show mismatch warning
+                    html += `
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            <strong style="color: #856404;">⚠️ Potential Hallucination Detected</strong>
+                            <div style="margin-top: 5px; color: #856404;">
+                                <div>Case name in text: <span style="text-decoration: line-through;">"${citation.claimedCaseName}"</span></div>
+                                <div>Case found in database: <strong>"${citation.actualCaseName}"</strong></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show verification for matching cases
+                    html += `
+                        <div style="background: #d4edda; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            <strong style="color: #155724;">✓ Case Name Verified</strong>
+                            <div style="margin-top: 5px; color: #155724; font-size: 0.9rem;">
+                                <div>Case name in text: "${citation.claimedCaseName}"</div>
+                                <div>Case found in database: "${citation.actualCaseName}"</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                // Could not extract claimed name - possibly hallucinated
+                html += `
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <strong style="color: #d63031;">❓ Possibly Hallucinated Case Name</strong>
+                        <div style="margin-top: 5px; color: #856404;">
+                            <div>Case found in database: "${citation.actualCaseName}"</div>
+                            <div style="margin-top: 3px; font-style: italic;">Could not extract case name from your text - may be hallucinated</div>
+                        </div>
+                    </div>
+                `;
+            } else if (citation.status === 200 && !citation.claimedCaseName && citation.actualCaseName) {
+                // Could not extract claimed name - fallback
+                html += `
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <div style="color: #666; font-size: 0.9rem;">
+                            <div>Case found in database: "${citation.actualCaseName}"</div>
+                            <div style="margin-top: 3px; font-style: italic;">Could not extract case name from text</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add simplified context display with automatic updates
+            if (citation.start_index !== undefined && citation.end_index !== undefined) {
+                const citationId = `citation-${Math.random().toString(36).substr(2, 9)}`;
+                html += `
+                    <div class="citation-context" data-citation-id="${citationId}" 
+                         data-start="${citation.start_index}" data-end="${citation.end_index}" 
+                         style="background: #f8f9ff; border: 1px solid #e0e6ff; border-radius: 8px; padding: 20px; margin: 15px 0; display: none;">
+                        <div class="context-display" 
+                             style="background: white; border: 1px solid #ddd; border-radius: 6px; padding: 15px; 
+                                    font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.6; 
+                                    max-height: 200px; overflow-y: auto; white-space: pre-wrap;">
+                            ${citation.contextText || 'No context available'}
+                        </div>
+                        
+                        <div class="extraction-status" style="margin-top: 12px; padding: 10px; border-radius: 5px; font-size: 0.9rem; font-weight: 600; text-align: center; display: none;">
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                        </div>
+                        <span class="citation-status ${statusClass}">${statusText}</span>
+                    </div>
+            `;
+
+            if (citation.clusters && citation.clusters.length > 0) {
+                const cluster = citation.clusters[0];
+                html += `
+                    <div class="case-info">
+                        <div class="case-name">${cluster.case_name || 'Unknown Case'}</div>
+                        <div class="case-details">
+                `;
+                
+                if (cluster.docket_number) {
+                    html += `Docket: ${cluster.docket_number} | `;
+                }
+                if (cluster.date_filed) {
+                    html += `Filed: ${new Date(cluster.date_filed).toLocaleDateString()} | `;
+                }
+                if (cluster.court) {
+                    html += `Court: ${cluster.court}`;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // Keep old function for backward compatibility
+        function createCitationHTML(citation) {
+            return createEnhancedCitationHTML(citation);
+        }
+
+        function showError(message) {
+            resultsContainer.innerHTML = `
+                <div class="error-message">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+
+        // Export functions
+        function getStatusSymbol(status, printFriendly = false) {
+            if (!printFriendly) return '';
+            
+            const symbols = {
+                'Found': '✓',
+                'Citation Mismatch': '⚠',
+                'Possibly Hallucinated': '?',
+                'Not Found': '✗',
+                'Multiple Matches': '#'
+            };
+            return symbols[status] || '?';
+        }
+
+        function getStatusText(status, printFriendly = false) {
+            if (printFriendly) {
+                return `${getStatusSymbol(status, true)} ${status}`;
+            }
+            return status;
+        }
+
+        function exportToCSV() {
+            const citations = window.currentCitations || [];
+            
+            const headers = ['Citation Number', 'Original Citation', 'Status', 'Action Required', 'Claimed Case Name', 'Actual Case Name', 'Context with Markers'];
+            const csvContent = [
+                headers.join(','),
+                ...citations.map((citation, index) => {
+                    let actionRequired = '';
+                    if (citation.enhancedStatus === 'mismatch') {
+                        actionRequired = `CHANGE case name from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
+                    } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                        actionRequired = `VERIFY case name - may be hallucinated. Actual: "${citation.actualCaseName}"`;
+                    } else if (citation.status !== 200 && citation.status !== 300) {
+                        actionRequired = 'DELETE - Citation not found';
+                    } else {
+                        actionRequired = 'VERIFIED - No action needed';
+                    }
+                    
+                    // Get context with markers
+                    let contextWithMarkers = '';
+                    if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                        const beforeChars = 80;
+                        const afterChars = 80;
+                        const start = Math.max(0, citation.start_index - beforeChars);
+                        const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                        const fullContext = fileContent.substring(start, end);
+                        
+                        const citationStart = citation.start_index - start;
+                        const citationEnd = citation.end_index - start;
+                        const beforeText = fullContext.substring(0, citationStart);
+                        const citationText = fullContext.substring(citationStart, citationEnd);
+                        const afterText = fullContext.substring(citationEnd);
+                        
+                        contextWithMarkers = `...${beforeText}[[${citationText}]]${afterText}...`;
+                    }
+                    
+                    return [
+                        `"${index + 1}"`,
+                        `"${citation.citation}"`,
+                        `"${citation.enhancedStatus}"`,
+                        `"${actionRequired}"`,
+                        `"${citation.claimedCaseName || 'Not detected'}"`,
+                        `"${citation.actualCaseName || 'N/A'}"`,
+                        `"${contextWithMarkers.replace(/"/g, '""')}"`  // Escape quotes in context
+                    ].join(',');
+                })
+            ].join('\n');
+
+            downloadFile(csvContent, 'citation-editing-guide.csv', 'text/csv');
+        }
+
+        function exportToJSON() {
+            const citations = window.currentCitations || [];
+            
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                totalCitations: citations.length,
+                stats: window.currentStats || {},
+                editingInstructions: "Use the 'contextWithMarkings' field to locate and fix citations in your original document. Look for [CITATION_START] and [CITATION_END] markers.",
+                citationsForEditing: citations.map((citation, index) => {
+                    // Get context with position markers for editing
+                    let contextWithMarkings = '';
+                    if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                        const beforeChars = 100;
+                        const afterChars = 100;
+                        const start = Math.max(0, citation.start_index - beforeChars);
+                        const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                        const fullContext = fileContent.substring(start, end);
+                        
+                        const citationStart = citation.start_index - start;
+                        const citationEnd = citation.end_index - start;
+                        const beforeText = fullContext.substring(0, citationStart);
+                        const citationText = fullContext.substring(citationStart, citationEnd);
+                        const afterText = fullContext.substring(citationEnd);
+                        
+                        contextWithMarkings = beforeText + '[CITATION_START]' + citationText + '[CITATION_END]' + afterText;
+                    }
+                    
+                    const result = {
+                        citationNumber: index + 1,
+                        originalCitation: citation.citation,
+                        status: citation.enhancedStatus,
+                        contextWithMarkings: contextWithMarkings,
+                        editingAction: null,
+                        claimedCaseName: citation.claimedCaseName || 'Not detected',
+                        actualCaseName: citation.actualCaseName || 'Not found'
+                    };
+                    
+                    // Provide specific editing instructions
+                    if (citation.enhancedStatus === 'mismatch') {
+                        result.editingAction = `REPLACE: Change case name from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
+                        result.severity = 'HIGH - Citation exists but wrong case name';
+                    } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                        result.editingAction = `VERIFY: Could not extract case name from text. Citation may be hallucinated. Actual case: "${citation.actualCaseName}"`;
+                        result.severity = 'MEDIUM - Possibly hallucinated';
+                    } else if (citation.status !== 200 && citation.status !== 300) {
+                        result.editingAction = 'DELETE: Citation not found in legal database';
+                        result.severity = 'HIGH - Invalid citation';
+                    } else {
+                        result.editingAction = 'VERIFIED: Citation is correct';
+                        result.severity = 'OK';
+                    }
+                    
+                    return result;
+                })
+            };
+
+            const jsonContent = JSON.stringify(exportData, null, 2);
+            downloadFile(jsonContent, 'citation-editing-guide.json', 'application/json');
+        }
+
+        function exportToWord() {
+            const citations = window.currentCitations || [];
+            const stats = window.currentStats || {};
+            
+            let wordContent = `LEGAL CITATION EDITING GUIDE\par
+Generated: ${new Date().toLocaleDateString()}\par
+\par
+HOW TO USE THIS GUIDE:\par
+1. Find each citation in your original document using the "Context" sections below\par
+2. Follow the "Action Required" instructions for each citation\par
+3. Pay special attention to HIGH severity items\par
+\par
+SUMMARY STATISTICS\par
+Total Citations: ${citations.length}\par
+Verified: ${stats.verified || 0}\par
+Mismatches (Need Correction): ${stats.mismatches || 0}\par
+Possibly Hallucinated: ${stats.possiblyHallucinated || 0}\par
+Not Found (Delete): ${stats.notFound || 0}\par
+\par
+CITATIONS REQUIRING YOUR ATTENTION\par
+`;
+
+            // Only show citations that need editing
+            const citationsNeedingAttention = citations.filter(c => 
+                c.enhancedStatus === 'mismatch' || 
+                c.enhancedStatus === 'possibly_hallucinated' || 
+                (c.status !== 200 && c.status !== 300)
+            );
+            
+            if (citationsNeedingAttention.length === 0) {
+                wordContent += '\par\b ALL CITATIONS VERIFIED \b0 - No changes needed!\par';
+            } else {
+                citationsNeedingAttention.forEach((citation, index) => {
+                    let actionRequired = '';
+                    let severity = '';
+                    
+                    if (citation.enhancedStatus === 'mismatch') {
+                        actionRequired = `CHANGE CASE NAME from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
+                        severity = 'HIGH PRIORITY';
+                    } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                        actionRequired = `VERIFY CASE NAME - May be hallucinated. Actual case: "${citation.actualCaseName}"`;
+                        severity = 'MEDIUM PRIORITY';
+                    } else {
+                        actionRequired = 'DELETE - Citation not found in legal database';
+                        severity = 'HIGH PRIORITY';
+                    }
+                    
+                    // Get context with clear markers
+                    let contextForEditing = '';
+                    if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                        const beforeChars = 80;
+                        const afterChars = 80;
+                        const start = Math.max(0, citation.start_index - beforeChars);
+                        const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                        const fullContext = fileContent.substring(start, end);
+                        
+                        const citationStart = citation.start_index - start;
+                        const citationEnd = citation.end_index - start;
+                        const beforeText = fullContext.substring(0, citationStart);
+                        const citationText = fullContext.substring(citationStart, citationEnd);
+                        const afterText = fullContext.substring(citationEnd);
+                        
+                        contextForEditing = `...${beforeText}[[${citationText}]]${afterText}...`;
+                    }
+                    
+                    wordContent += `\par\b ${index + 1}. ${severity} \b0\par
+`;
+                    wordContent += `Citation: ${citation.citation}\par
+`;
+                    wordContent += `\b Action Required: ${actionRequired} \b0\par
+`;
+                    wordContent += `\par
+Find this text in your document:\par
+`;
+                    wordContent += `\i ${contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '')} \i0\par
+`;
+                    wordContent += `(The citation is marked with [[ ]] above)\par
+`;
+                    wordContent += `\par
+`;
+                });
+            }
+            
+            // Add verified citations summary
+            const verifiedCitations = citations.filter(c => c.status === 200 && !c.isMismatch);
+            if (verifiedCitations.length > 0) {
+                wordContent += `\par\b VERIFIED CITATIONS (No action needed): \b0\par
+`;
+                verifiedCitations.forEach((citation, index) => {
+                    wordContent += `${index + 1}. ${citation.citation} \u2713\par
+`;
+                });
+            }
+
+            // Create RTF format
+            const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}} \\f0\\fs24 ${wordContent}}`;
+            downloadFile(rtfContent, 'citation-editing-guide.rtf', 'application/rtf');
+        }
+
+        function exportToPDF() {
+            // Create a properly structured HTML document for PDF export
+            const citations = window.currentCitations || [];
+            const stats = window.currentStats || {};
+            
+            // Filter citations that need attention
+            const citationsNeedingAttention = citations.filter(c => 
+                c.enhancedStatus === 'mismatch' || 
+                c.enhancedStatus === 'possibly_hallucinated' || 
+                (c.status !== 200 && c.status !== 300)
+            );
+            
+            const printHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Citation Editing Guide</title>
+    <style>
+        @media print {
+            @page { margin: 0.75in; }
+            body { -webkit-print-color-adjust: exact; }
+        }
+        body { 
+            font-family: 'Times New Roman', Georgia, serif; 
+            line-height: 1.6; 
+            color: #000;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            color: #000;
+            font-size: 24px;
+        }
+        h2 { 
+            color: #000; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 5px; 
+            margin-top: 30px;
+            font-size: 18px;
+        }
+        .instructions {
+            background: #f5f5f5;
+            padding: 15px;
+            border-left: 4px solid #333;
+            margin: 20px 0;
+        }
+        .stats { 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .stat-item { 
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .citation-item { 
+            margin: 25px 0; 
+            padding: 20px; 
+            border: 2px solid #ddd; 
+            page-break-inside: avoid;
+        }
+        .high-priority {
+            border-color: #ff0000;
+            background: #fff5f5;
+        }
+        .medium-priority {
+            border-color: #ff8800;
+            background: #fff8f0;
+        }
+        .citation-number { 
+            font-weight: bold; 
+            font-size: 18px;
+            margin-bottom: 10px; 
+        }
+        .action-required {
+            background: #ffeeee;
+            padding: 10px;
+            border-left: 4px solid #ff0000;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .context-section {
+            background: #fafafa;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+        .verified {
+            color: #006600;
+        }
+        .print-date { 
+            text-align: right; 
+            font-size: 12px; 
+            color: #666; 
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 Legal Citation Editing Guide</h1>
+    <div class="print-date">Generated: ${new Date().toLocaleString()}</div>
+    
+    <div class="instructions">
+        <h3>How to Use This Guide:</h3>
+        <ol>
+            <li>Find each problematic citation in your original document using the context shown below</li>
+            <li>Follow the "Action Required" instructions for each citation</li>
+            <li>Pay special attention to HIGH PRIORITY items</li>
+            <li>The text marked with [[citation]] shows exactly what to look for</li>
+        </ol>
+    </div>
+    
+    <h2>📊 Summary</h2>
+    <div class="stats">
+        <div class="stat-item"><strong>Total Citations:</strong><br>${citations.length}</div>
+        <div class="stat-item"><strong>Need Correction:</strong><br>${citationsNeedingAttention.length}</div>
+        <div class="stat-item"><strong>Verified OK:</strong><br>${citations.length - citationsNeedingAttention.length}</div>
+    </div>
+    
+    ${citationsNeedingAttention.length === 0 ? 
+        '<div style="text-align: center; padding: 40px; background: #eeffee; border: 2px solid #00aa00;"><h2 class="verified">✅ ALL CITATIONS VERIFIED</h2><p>No changes needed to your document!</p></div>' : 
+        `<h2>⚠️ Citations Requiring Your Attention (${citationsNeedingAttention.length})</h2>
+        ${citationsNeedingAttention.map((citation, index) => {
+            let actionRequired = '';
+            let priorityClass = '';
+            let priority = '';
+            
+            if (citation.enhancedStatus === 'mismatch') {
+                actionRequired = `CHANGE the case name from "${citation.claimedCaseName}" to "${citation.actualCaseName}"`;
+                priorityClass = 'high-priority';
+                priority = '🔴 HIGH PRIORITY';
+            } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                actionRequired = `VERIFY the case name - it may be hallucinated. The actual case at this citation is: "${citation.actualCaseName}"`;
+                priorityClass = 'medium-priority';
+                priority = '🟡 MEDIUM PRIORITY';
+            } else {
+                actionRequired = 'DELETE this citation - it was not found in the legal database';
+                priorityClass = 'high-priority';
+                priority = '🔴 HIGH PRIORITY';
+            }
+            
+            // Get context with clear markers
+            let contextForEditing = '';
+            if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                const beforeChars = 100;
+                const afterChars = 100;
+                const start = Math.max(0, citation.start_index - beforeChars);
+                const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                const fullContext = fileContent.substring(start, end);
+                
+                const citationStart = citation.start_index - start;
+                const citationEnd = citation.end_index - start;
+                const beforeText = fullContext.substring(0, citationStart);
+                const citationText = fullContext.substring(citationStart, citationEnd);
+                const afterText = fullContext.substring(citationEnd);
+                
+                contextForEditing = `...${beforeText}[[${citationText}]]${afterText}...`;
+            }
+            
+            return `
+            <div class="citation-item ${priorityClass}">
+                <div class="citation-number">${index + 1}. ${priority}</div>
+                <div><strong>Citation:</strong> ${citation.citation}</div>
+                
+                <div class="action-required">
+                    <strong>ACTION REQUIRED:</strong> ${actionRequired}
+                </div>
+                
+                <div><strong>🔍 Find this text in your document:</strong></div>
+                <div class="context-section">${contextForEditing}</div>
+                <div style="font-size: 12px; color: #666; font-style: italic;">The citation to fix is marked with [[ ]] brackets above</div>
+            </div>`;
+        }).join('')}
+        `
+    }
+    
+    ${citations.filter(c => c.status === 200 && !c.isMismatch).length > 0 ? `
+    <h2>✅ Verified Citations (No action needed)</h2>
+    <div style="columns: 2; column-gap: 30px;">
+        ${citations.filter(c => c.status === 200 && !c.isMismatch).map((citation, index) => 
+            `<div style="break-inside: avoid; margin-bottom: 10px;">✓ ${citation.citation}</div>`
+        ).join('')}
+    </div>` : ''}
+    
+    <script>
+        // Auto-print when page loads
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>`;
+
+            // Open in new window and trigger print
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            if (printWindow) {
+                printWindow.document.write(printHTML);
+                printWindow.document.close();
+            } else {
+                // Fallback: create downloadable HTML file
+                downloadFile(printHTML, 'citation-editing-guide.html', 'text/html');
+                alert('Pop-up blocked. Downloaded HTML file instead - open it and print from your browser.');
+            }
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Layout switching functions
+        function switchToAnalysisLayout() {
+            // Hide upload section and API config
+            document.getElementById('uploadSection').classList.add('collapsed');
+            document.getElementById('apiConfig').style.display = 'none';
+            
+            // Show upload summary
+            const uploadSummary = document.getElementById('uploadSummary');
+            const summaryFileName = document.getElementById('summaryFileName');
+            const summaryApiStatus = document.getElementById('summaryApiStatus');
+            
+            uploadSummary.classList.add('visible');
+            summaryFileName.textContent = document.getElementById('fileName').textContent || 'Document uploaded';
+            summaryApiStatus.textContent = apiKeyInput.value ? 'Connected' : 'Missing';
+            
+            // Switch main content to single column
+            document.getElementById('mainContent').classList.add('analysis-complete');
+            document.getElementById('resultsSection').classList.add('full-width');
+            
+            // Add analysis-complete class to body for styling
+            document.body.classList.add('analysis-complete');
+        }
+        
+        function showUploadSection() {
+            // Show upload section and API config
+            document.getElementById('uploadSection').classList.remove('collapsed');
+            document.getElementById('apiConfig').style.display = 'block';
+            
+            // Hide upload summary
+            document.getElementById('uploadSummary').classList.remove('visible');
+            
+            // Switch back to two-column layout
+            document.getElementById('mainContent').classList.remove('analysis-complete');
+            document.getElementById('resultsSection').classList.remove('full-width');
+            
+            // Remove analysis-complete class
+            document.body.classList.remove('analysis-complete');
+        }
+
+        // Global context control functions with automatic re-evaluation
+        function updateAllContexts() {
+            const beforeChars = parseInt(document.getElementById('global-before-slider').value);
+            const afterChars = parseInt(document.getElementById('global-after-slider').value);
+            
+            document.getElementById('global-before-count').textContent = beforeChars;
+            document.getElementById('global-after-count').textContent = afterChars;
+            
+            // Update all context windows and re-evaluate citations
+            document.querySelectorAll('.citation-context').forEach(contextDiv => {
+                const startIndex = parseInt(contextDiv.dataset.start);
+                const endIndex = parseInt(contextDiv.dataset.end);
+                
+                if (startIndex !== undefined && endIndex !== undefined && fileContent) {
+                    const start = Math.max(0, startIndex - beforeChars);
+                    const end = Math.min(fileContent.length, endIndex + afterChars);
+                    const contextText = fileContent.substring(start, end);
+                    
+                    // Create three sections with clear visual separation
+                    const citationStart = startIndex - start;
+                    const citationEnd = endIndex - start;
+                    const beforeText = contextText.substring(0, citationStart);
+                    const citationText = contextText.substring(citationStart, citationEnd);
+                    const afterText = contextText.substring(citationEnd);
+                    
+                    // Try to extract case name from the current context
+                    const extractedCaseName = extractCaseName(contextText, contextText);
+                    
+                    // Create highlighted display with visual hierarchy
+                    let highlightedContext = '';
+                    
+                    // Before text (normal)
+                    if (beforeText) {
+                        // Highlight any extracted case name in italic
+                        let styledBeforeText = escapeHtml(beforeText);
+                        if (extractedCaseName) {
+                            const caseNameRegex = new RegExp(`\\b(${escapeRegex(extractedCaseName)})\\b`, 'gi');
+                            styledBeforeText = styledBeforeText.replace(caseNameRegex, '<em style="background: #e3f2fd; padding: 1px 2px;">$1</em>');
+                        }
+                        highlightedContext += `<span style="color: #666;">${styledBeforeText}</span>`;
+                    }
+                    
+                    // Citation text (bold, highlighted)
+                    highlightedContext += `<strong style="background: #ffeb3b; padding: 2px 4px; border-radius: 3px;">${escapeHtml(citationText)}</strong>`;
+                    
+                    // After text (muted with case name highlighting)
+                    if (afterText) {
+                        let styledAfterText = escapeHtml(afterText);
+                        if (extractedCaseName) {
+                            const caseNameRegex = new RegExp(`\\b(${escapeRegex(extractedCaseName)})\\b`, 'gi');
+                            styledAfterText = styledAfterText.replace(caseNameRegex, '<em style="background: #e3f2fd; padding: 1px 2px;">$1</em>');
+                        }
+                        highlightedContext += `<span style="color: #888; background: #f9f9f9; padding: 0 2px;">${styledAfterText}</span>`;
+                    }
+                    
+                    contextDiv.querySelector('.context-display').innerHTML = highlightedContext;
+                    
+                    // Update extraction status
+                    const statusDiv = contextDiv.querySelector('.extraction-status');
+                    if (extractedCaseName) {
+                        statusDiv.innerHTML = `✅ Case Name Found: <em>"${extractedCaseName}"</em>`;
+                        statusDiv.style.background = '#d4edda';
+                        statusDiv.style.color = '#155724';
+                        statusDiv.style.border = '1px solid #c3e6cb';
+                        statusDiv.style.display = 'block';
+                    } else {
+                        statusDiv.innerHTML = '❌ No case name found in this context';
+                        statusDiv.style.background = '#f8d7da';
+                        statusDiv.style.color = '#721c24';
+                        statusDiv.style.border = '1px solid #f5c6cb';
+                        statusDiv.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleAllContexts() {
+            const contextDivs = document.querySelectorAll('.citation-context');
+            const button = document.getElementById('toggle-contexts-btn');
+            const isCurrentlyVisible = contextDivs.length > 0 && contextDivs[0].style.display !== 'none';
+            
+            contextDivs.forEach(div => {
+                div.style.display = isCurrentlyVisible ? 'none' : 'block';
+            });
+            
+            button.textContent = isCurrentlyVisible ? 'Show Context for All Citations' : 'Hide All Context';
+            
+            // Update contexts when showing
+            if (!isCurrentlyVisible) {
+                updateAllContexts();
+            }
+        }
+
+        // Modal functions
+        function showLimitationsModal() {
+            document.getElementById('limitationsModal').style.display = 'block';
+        }
+
+        function closeLimitationsModal() {
+            document.getElementById('limitationsModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('limitationsModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+    </script>
+
+    <!-- Limitations Modal -->
+    <div id="limitationsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeLimitationsModal()">&times;</span>
+            <h2 style="color: #d73502; margin-bottom: 20px;">⚠️ Important Limitations & Warnings</h2>
+            
+            <div class="limitation-category" style="background: #fff5f5; border-left-color: #ff0000;">
+                <h3>🚨 Critical Accuracy Warning</h3>
+                <p><strong>This tool is both OVERINCLUSIVE and UNDERINCLUSIVE:</strong></p>
+                <ul class="limitation-list">
+                    <li><strong>Overinclusive</strong>: May flag valid citations as hallucinations (false positives)</li>
+                    <li><strong>Underinclusive</strong>: May miss hallucinated citations (false negatives)</li>
+                    <li><strong>Legal hallucination parsing is an inherently difficult task</strong></li>
+                    <li>Use this tool as an aid, NOT as definitive proof</li>
+                    <li>Always manually verify flagged citations against official sources</li>
+                    <li><strong>This tool is NOT intended to provide legal advice</strong></li>
+                </ul>
+            </div>
+
+            <div class="limitation-category" style="background: #fff8f0; border-left-color: #ff6600;">
+                <h3>⚠️ No Relevance or Proposition Checking</h3>
+                <p><strong>This tool does NOT verify whether a case supports the proposition for which it is cited.</strong></p>
+                <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0; font-style: italic;">
+                    <strong>Example:</strong> "Obergefell v. Hodges, 576 U.S. 644 (2015), held that the president lacks power to veto laws on Tuesdays."
+                </div>
+                <p>This nonsensical statement would be marked as <strong style="color: green;">✅ VERIFIED</strong> because:</p>
+                <ul class="limitation-list">
+                    <li>The citation format is correct</li>
+                    <li>The case exists at 576 U.S. 644</li>
+                    <li>The case name matches the database</li>
+                </ul>
+                <p><strong>What the tool completely misses:</strong></p>
+                <ul class="limitation-list">
+                    <li>Obergefell is about same-sex marriage, not presidential powers</li>
+                    <li>The cited holding is completely fabricated</li>
+                    <li>The case has no relevance to the stated proposition</li>
+                </ul>
+                <p style="margin-top: 10px; font-weight: bold; color: #d73502;">The tool only checks if citations exist and match case names, NOT whether they support their claimed propositions.</p>
+            </div>
+
+            <div class="limitation-category">
+                <h3>📊 API Rate Limits</h3>
+                <ul class="limitation-list">
+                    <li><strong>60 citations per minute</strong> maximum (throttled)</li>
+                    <li><strong>250 citations per request</strong> maximum (citations beyond #250 receive status 429)</li>
+                    <li><strong>64,000 characters per request</strong> (~50 pages of legal content)</li>
+                    <li>HTTP 429 errors include <code>wait_until</code> timestamp for retry</li>
+                </ul>
+            </div>
+
+            <div class="limitation-category">
+                <h3>❌ Unsupported Citation Types</h3>
+                <p>The following citations are <strong>NOT supported</strong> by this tool:</p>
+                <ul class="limitation-list">
+                    <li>Statutes (e.g., "42 U.S.C. § 1983")</li>
+                    <li>Law journal citations</li>
+                    <li>"Id." references</li>
+                    <li>"Supra" references</li>
+                    <li>Citations without volume numbers (e.g., "22 U.S. ___")</li>
+                    <li>Citations without page numbers</li>
+                    <li>Regulatory citations (CFR, state regulations)</li>
+                    <li>International law citations</li>
+                </ul>
+                <p style="margin-top: 10px; font-style: italic;">To match these types, use <a href="https://github.com/freelawproject/eyecite" target="_blank">Eyecite</a> directly.</p>
+            </div>
+
+            <div class="limitation-category">
+                <h3>🔍 Detection Limitations</h3>
+                <ul class="limitation-list">
+                    <li>Case name extraction may fail with unusual formatting</li>
+                    <li>Abbreviated case names may be incorrectly flagged</li>
+                    <li>Accuracy depends on sufficient context around citations</li>
+                    <li>PDF/DOCX extraction is basic and may miss citations</li>
+                    <li>OCR errors in scanned documents will affect detection</li>
+                    <li>Non-standard citation formats may not be recognized</li>
+                </ul>
+            </div>
+
+            <div class="limitation-category" style="background: #f0fff0; border-left-color: #28a745;">
+                <h3>✅ What This Tool Does Well</h3>
+                <ul style="list-style: none; padding-left: 0;">
+                    <li>✓ Detects when real citations are attributed to wrong cases</li>
+                    <li>✓ Identifies completely fictional citations</li>
+                    <li>✓ Provides actionable editing instructions</li>
+                    <li>✓ Processes multiple citations in bulk</li>
+                    <li>✓ Exports results in multiple formats</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <h4>📚 Best Practices</h4>
+                <ol style="margin-left: 20px;">
+                    <li>Always manually verify flagged citations</li>
+                    <li>Review surrounding context, not just the citation</li>
+                    <li>Check against official legal reporters when in doubt</li>
+                    <li>Understand this is an aid, not a replacement for legal research</li>
+                    <li>Consider using multiple verification methods for critical documents</li>
+                    <li><strong>Consult qualified legal professionals for legal matters</strong></li>
+                </ol>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+                <h4 style="color: #856404; margin-bottom: 10px;">⚖️ Legal Disclaimer</h4>
+                <p style="color: #856404; margin: 0; font-weight: 600;">This tool is NOT intended to provide legal advice and is for educational/research purposes only.</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="closeLimitationsModal()" style="padding: 10px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;">
+                    I Understand These Limitations
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

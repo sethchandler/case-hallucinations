@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Claude with Zen MCP Server Launcher
+# Starts zen MCP server and then launches Claude Code
+
+echo "🤖 Starting Zen MCP Server..."
+cd /Users/Seth/dev/Trump-v-CASA/zen-mcp-server
+
+# Start zen MCP server in background
+./run-server.sh > /dev/null 2>&1 &
+ZEN_PID=$!
+
+# Wait a moment for server to initialize
+sleep 2
+
+# Check if server started successfully
+if ps -p $ZEN_PID > /dev/null; then
+    echo "✅ Zen MCP Server started (PID: $ZEN_PID)"
+    echo "🚀 Launching Claude Code..."
+    
+    # Launch Claude Code
+    claude
+    
+    # When Claude exits, clean up the zen server
+    echo "🛑 Stopping Zen MCP Server..."
+    kill $ZEN_PID 2>/dev/null
+    echo "✅ Zen MCP Server stopped"
+else
+    echo "❌ Failed to start Zen MCP Server"
+    exit 1
+fi
