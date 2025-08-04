@@ -890,8 +890,182 @@
             }
         });
 
-        // Extract ONLY the case name from citation text or context
-        function extractCaseName(citationText, contextText = '') {
+        /**
+         * Enhanced case name extraction using Capitalization Chain heuristic.
+         * This is the new improved algorithm that works backward/forward from citation positions.
+         * @param {string} fullText The complete legal text to search within.
+         * @param {{start: number, end: number}} citationSpan Object with start/end positions of citation.
+         * @param {number} searchBefore Maximum chars to search backward (default: 200).
+         * @param {number} searchAfter Maximum chars to search forward (default: 200).
+         * @returns {string|null} The extracted case name or null if not found.
+         */
+        function extractCaseNameNew(fullText, citationSpan, searchBefore = 200, searchAfter = 200) {
+            // Input validation
+            if (!fullText || !citationSpan || typeof citationSpan.start === 'undefined') {
+                console.error("Invalid input: fullText and citationSpan must be provided.");
+                return null;
+            }
+
+            // Expanded connectors and variants
+            const lowercaseConnectors = new Set([
+                'of', 'the', 'and', 'in', 'on', 'for', 'to', 'v', 'v.', 'vs', 'vs.', 'ex', 'rel',
+                'et', 'al'
+            ]);
+
+            // Expanded stop words for better boundary detection
+            const stopWords = new Set([
+                'see', 'see,', 'in', 'cf', 'cf.', 'e.g.', 'e.g.,', 'in:', 'case', 'held', 'argued',
+                'cited', 'citing', 'explained', 'from', 'under', 'involving', 'ruling', 'decision',
+                'holding', 'affirming', 'quoting', 'finding', 'stating', 'noting', 'as', 'established'
+            ]);
+
+            // Primary Method: Backward Search (Capitalization Chain)
+            function searchBackward() {
+                const windowStart = Math.max(0, citationSpan.start - searchBefore);
+                const searchWindow = fullText.substring(windowStart, citationSpan.start);
+                const words = searchWindow.trim().split(/\s+/).filter(Boolean);
+
+                if (words.length === 0) return null;
+
+                let nameEndIndex = words.length;
+                let nameStartIndex = -1;
+
+                for (let i = words.length - 1; i >= 0; i--) {
+                    let word = words[i];
+                    const cleanedWord = word.replace(/[,;:]+$/, '');
+                    const lowerCaseWord = cleanedWord.toLowerCase();
+
+                    if (stopWords.has(lowerCaseWord)) {
+                        nameStartIndex = i + 1;
+                        break;
+                    }
+
+                    const isCapitalized = /^[A-Z]/.test(cleanedWord);
+                    const isNumeric = /^\d+$/.test(cleanedWord);
+                    const isAbbreviation = /^[A-Z]+\.?$/.test(cleanedWord) || /^[A-Z]\.$/.test(cleanedWord); // Handle U.S., H.P., Inc., etc.
+                    const isPartOfChain = isCapitalized || isNumeric || isAbbreviation || lowercaseConnectors.has(lowerCaseWord);
+
+                    if (!isPartOfChain) {
+                        nameStartIndex = i + 1;
+                        break;
+                    }
+
+                    if (i === 0) {
+                        nameStartIndex = 0;
+                    }
+                }
+
+                if (nameStartIndex === -1 || nameStartIndex >= nameEndIndex) return null;
+
+                const caseNameWords = words.slice(nameStartIndex, nameEndIndex);
+                const finalCaseName = caseNameWords.join(' ').trim();
+                return finalCaseName.replace(/[,;:]\s*$/, '');
+            }
+
+            // Fallback Method: Forward Search
+            function searchForward() {
+                if (!searchAfter || searchAfter <= 0) return null;
+
+                const windowEnd = Math.min(fullText.length, citationSpan.end + searchAfter);
+                const searchWindow = fullText.substring(citationSpan.end, windowEnd).replace(/^[\s,;:]+/, '');
+                const words = searchWindow.trim().split(/\s+/).filter(Boolean);
+
+                if (words.length === 0) return null;
+
+                let nameStartIndex = 0;
+                let nameEndIndex = -1;
+                
+                // First word MUST start the chain (be capitalized or numeric)
+                const firstWord = words[0];
+                if (!/^[A-Z]/.test(firstWord) && !/^\d+$/.test(firstWord)) {
+                    return null;
+                }
+
+                // Iterate forward to find end of chain
+                for (let i = 0; i < words.length; i++) {
+                    const cleanedWord = words[i].replace(/[,;:]+$/, '');
+                    const lowerCaseWord = cleanedWord.toLowerCase();
+
+                    const isCapitalized = /^[A-Z]/.test(cleanedWord);
+                    const isNumeric = /^\d+$/.test(cleanedWord);
+                    const isAbbreviation = /^[A-Z]+\.?$/.test(cleanedWord) || /^[A-Z]\.$/.test(cleanedWord); // Handle U.S., H.P., Inc., etc.
+                    const isPartOfChain = isCapitalized || isNumeric || isAbbreviation || lowercaseConnectors.has(lowerCaseWord);
+
+                    if (!isPartOfChain) {
+                        nameEndIndex = i;
+                        break;
+                    }
+                    
+                    if (i === words.length - 1) {
+                        nameEndIndex = words.length;
+                    }
+                }
+
+                if (nameEndIndex <= nameStartIndex) return null;
+
+                const caseNameWords = words.slice(nameStartIndex, nameEndIndex);
+                return caseNameWords.join(' ').trim();
+            }
+
+            // Try backward search first, then forward search
+            let result = searchBackward();
+            if (!result || result.length === 0) {
+                result = searchForward();
+            }
+
+            // Post-processing: Remove leading prepositions that shouldn't be part of case names
+            if (result && result.length > 0) {
+                const leadingPrepositions = ['to', 'on', 'at', 'by', 'with', 'for', 'in', 'from', 'under', 'through'];
+                const lowerResult = result.toLowerCase();
+                
+                for (const prep of leadingPrepositions) {
+                    if (lowerResult.startsWith(prep + ' ')) {
+                        result = result.substring(prep.length + 1).trim();
+                        console.log(`🧹 Cleaned leading preposition "${prep}" from case name`);
+                        break;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         * Master case name extraction function - uses new algorithm with minimal fallback.
+         * @param {string} fullText - The complete legal text
+         * @param {Object} citation - Citation object with start_index, end_index, and citation text
+         * @returns {string|null} The extracted case name or null
+         */
+        function extractCaseName(fullText, citation) {
+            // Use new algorithm (should work in 95%+ of cases)
+            if (fullText && citation && typeof citation.start_index !== 'undefined' && typeof citation.end_index !== 'undefined') {
+                const citationSpan = {
+                    start: citation.start_index,
+                    end: citation.end_index
+                };
+                
+                const result = extractCaseNameNew(fullText, citationSpan, 200, 200);
+                
+                if (result && result.length > 0) {
+                    console.log('✅ New algorithm extracted:', result);
+                    return result;
+                }
+            }
+            
+            // Minimal fallback only for edge cases (missing position data, etc.)
+            console.log('⚠️ Using fallback - missing position data or edge case');
+            let contextText = '';
+            if (fullText && citation && typeof citation.start_index !== 'undefined') {
+                const start = Math.max(0, citation.start_index - 100);
+                const end = Math.min(fullText.length, citation.end_index + 100);
+                contextText = fullText.substring(start, end);
+            }
+            
+            return extractCaseNameOld(citation.citation || '', contextText);
+        }
+
+        // OLD VERSION: Extract case name from citation text or context (FALLBACK)
+        function extractCaseNameOld(citationText, contextText = '') {
             console.log('Extracting case name from citation:', citationText);
             console.log('Using context:', contextText);
             
@@ -1054,7 +1228,7 @@
                     console.log('Original citation text:', originalText);
                 }
                 
-                const claimedCaseName = extractCaseName(originalText, contextText);
+                const claimedCaseName = extractCaseName(fileContent, citation);
                 const actualCaseName = citation.clusters && citation.clusters[0] 
                     ? citation.clusters[0].case_name 
                     : null;
@@ -1864,7 +2038,12 @@
                     const afterText = contextText.substring(citationEnd);
                     
                     // Try to extract case name from the current context
-                    const extractedCaseName = extractCaseName(contextText, contextText);
+                    const mockCitation = {
+                        start_index: startIndex,
+                        end_index: endIndex,
+                        citation: citationText
+                    };
+                    const extractedCaseName = extractCaseName(fileContent, mockCitation);
                     
                     // Create highlighted display with visual hierarchy
                     let highlightedContext = '';
