@@ -281,6 +281,11 @@
             color: white;
         }
 
+        .export-btn.markdown {
+            background: #059669;
+            color: white;
+        }
+
         .export-btn.pdf {
             background: #dc3545;
             color: white;
@@ -386,42 +391,82 @@
             margin-top: 5px;
         }
 
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 800px;
-            border-radius: 10px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .close-modal {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
+        .warning-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.95rem;
             cursor: pointer;
+            transition: transform 0.2s ease;
+            animation: pulse 2s infinite;
         }
 
-        .close-modal:hover,
-        .close-modal:focus {
-            color: #000;
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .warning-btn:hover {
+            transform: translateY(-2px);
+            animation: none;
+        }
+
+        .warning-banner {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-banner-icon {
+            font-size: 2rem;
+        }
+
+        .warning-banner-content {
+            flex: 1;
+        }
+
+        .warning-banner-title {
+            font-weight: bold;
+            color: #d73502;
+            margin-bottom: 5px;
+        }
+
+        .limitation-category {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .limitation-category h3 {
+            color: #d73502;
+            margin-bottom: 10px;
+        }
+
+        .limitation-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .limitation-list li {
+            padding: 5px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .limitation-list li:before {
+            content: "⚠️";
+            position: absolute;
+            left: 0;
         }
 
     </style>
@@ -431,6 +476,18 @@
         <div class="header">
             <h1>📚 Legal Citation Finder</h1>
             <p>Upload a text file to extract and verify legal citations using CourtListener's Eyecite API</p>
+        </div>
+
+        <!-- Warning Banner -->
+        <div class="warning-banner">
+            <div class="warning-banner-icon">⚠️</div>
+            <div class="warning-banner-content">
+                <div class="warning-banner-title">Critical Limitation</div>
+                <div id="warning-banner-text">This app only checks if case citations exist - it does NOT verify whether cases support your legal arguments.</div>
+            </div>
+            <a href="limitations.html" target="_blank" style="padding: 8px 15px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block;">
+                View All Limitations
+            </a>
         </div>
 
         <!-- Collapsed upload summary (hidden by default) -->
@@ -1023,6 +1080,7 @@
                     <ul style="font-size: 0.9rem; color: #666; margin: 10px 0;">
                         <li><strong>JSON:</strong> Structured data with context markers for automated processing</li>
                         <li><strong>Word (RTF):</strong> Human-readable editing instructions (opens in Word/LibreOffice)</li>
+                        <li><strong>Markdown:</strong> Clean format for technical documentation and version control</li>
                         <li><strong>PDF:</strong> Print-friendly editing guide with highlighted problem areas</li>
                         <li><strong>CSV:</strong> Spreadsheet format for bulk analysis</li>
                     </ul>
@@ -1038,6 +1096,9 @@
                         </button>
                         <button class="export-btn word" onclick="exportToWord()">
                             📝 Word Compatible (RTF)
+                        </button>
+                        <button class="export-btn markdown" onclick="exportToMarkdown()">
+                            📝 Markdown Report
                         </button>
                         <button class="export-btn pdf" onclick="exportToPDF()">
                             📄 PDF Report
@@ -1490,6 +1551,93 @@
             downloadFile(rtfContent, filename, 'application/rtf');
         }
 
+        function exportToMarkdown() {
+            const citations = window.currentCitations || [];
+            const stats = window.currentStats || {};
+            
+            // Create timestamp for filename
+            const now = new Date();
+            const timestamp = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + '_' + 
+                String(now.getHours()).padStart(2, '0') + '-' + 
+                String(now.getMinutes()).padStart(2, '0');
+            
+            // Create Markdown content
+            let markdownContent = '# Legal Citation Editing Guide\n\n';
+            markdownContent += 'Generated: ' + now.toLocaleDateString() + ' at ' + now.toLocaleTimeString() + '\n\n';
+            
+            // Instructions
+            markdownContent += '## How to Use This Guide\n\n';
+            markdownContent += '1. Find each citation in your original document using the "Context" sections below\n';
+            markdownContent += '2. Follow the "Action Required" instructions for each citation\n';
+            markdownContent += '3. Citations are listed in the same order they appear in your document\n\n';
+            
+            // Summary statistics
+            markdownContent += '## Summary Statistics\n\n';
+            markdownContent += '- **Total Citations:** ' + citations.length + '\n';
+            markdownContent += '- **Verified:** ' + (stats.verified || 0) + '\n';
+            markdownContent += '- **Mismatches (Need Correction):** ' + (stats.mismatches || 0) + '\n';
+            markdownContent += '- **Possibly Hallucinated:** ' + (stats.possiblyHallucinated || 0) + '\n';
+            markdownContent += '- **Not Found (Delete):** ' + (stats.notFound || 0) + '\n\n';
+
+            // Show ALL citations in document order
+            markdownContent += '## All Citations (In Document Order)\n\n';
+            
+            citations.forEach((citation, index) => {
+                let actionRequired = '';
+                let status = 'VERIFIED';
+                
+                if (citation.enhancedStatus === 'mismatch') {
+                    actionRequired = 'CHANGE CASE NAME from "' + (citation.claimedCaseName || '') + '" to "' + (citation.actualCaseName || '') + '"';
+                    status = 'MISMATCH';
+                } else if (citation.enhancedStatus === 'possibly_hallucinated') {
+                    actionRequired = 'VERIFY CASE NAME - May be hallucinated. Actual case: "' + (citation.actualCaseName || '') + '"';
+                    status = 'POSSIBLY HALLUCINATED';
+                } else if (citation.status !== 200 && citation.status !== 300) {
+                    actionRequired = 'DELETE - Citation not found in legal database';
+                    status = 'NOT FOUND';
+                } else {
+                    actionRequired = 'No action needed - Citation verified';
+                    status = 'VERIFIED';
+                }
+                
+                // Get context with clear markers
+                let contextForEditing = '';
+                if (citation.start_index !== undefined && citation.end_index !== undefined && fileContent) {
+                    const beforeChars = 100;
+                    const afterChars = 100;
+                    const start = Math.max(0, citation.start_index - beforeChars);
+                    const end = Math.min(fileContent.length, citation.end_index + afterChars);
+                    const fullContext = fileContent.substring(start, end);
+                    
+                    const citationStart = citation.start_index - start;
+                    const citationEnd = citation.end_index - start;
+                    const beforeText = fullContext.substring(0, citationStart);
+                    const citationText = fullContext.substring(citationStart, citationEnd);
+                    const afterText = fullContext.substring(citationEnd);
+                    
+                    contextForEditing = '...' + beforeText + '[[' + citationText + ']]' + afterText + '...';
+                }
+                
+                // Citation entry
+                markdownContent += '### Citation ' + (index + 1) + ': ' + status + '\n\n';
+                markdownContent += '**Citation Text:** ' + citation.citation + '\n\n';
+                markdownContent += '**Action Required:** ' + actionRequired + '\n\n';
+                
+                if (contextForEditing) {
+                    markdownContent += '**Context in Your Document:**\n\n';
+                    markdownContent += '```\n' + contextForEditing.replace(/\[\[/g, '').replace(/\]\]/g, '') + '\n```\n\n';
+                    markdownContent += '*(The citation to check/fix is marked with [[ ]] brackets above)*\n\n';
+                }
+                
+                markdownContent += '---\n\n';
+            });
+
+            const filename = 'citation-editing-guide_' + timestamp + '.md';
+            downloadFile(markdownContent, filename, 'text/markdown');
+        }
+
         function exportToPDF() {
             // Create a properly structured HTML document for PDF export
             const citations = window.currentCitations || [];
@@ -1851,6 +1999,7 @@
                 updateAllContexts();
             }
         }
+
 
 
     </script>

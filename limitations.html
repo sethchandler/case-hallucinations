@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Hallucinations App - Limitations and Usage Guide</title>
+    <style>
+        body {
+            font-family: Georgia, serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .limitation-item {
+            background: #f8f9fa;
+            border-left: 4px solid #6c757d;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        em {
+            font-style: italic;
+            color: #e74c3c;
+        }
+        
+        strong {
+            color: #2c3e50;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 0.9em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Practical Guide to Using the Case Hallucinations App</h1>
+        
+        <p>This document outlines the capabilities and limitations of our case hallucinations detection app. This tool is designed to serve as an initial screening mechanism to help identify "hallucinated" or non-existent case citations.</p>
+        
+        <div class="warning-box">
+            <strong>Critical Limitation:</strong> This app makes <strong>NO effort to determine whether cited cases actually support or are relevant to what you are asserting in your text</strong>. A case citation can be completely "accurate" but you can be citing the case for a proposition that the actual case does not support.
+        </div>
+
+        <div class="warning-box">
+            <strong>Important:</strong> It is essential to understand that the application is both <em>underinclusive</em> and <em>overinclusive</em>. It is underinclusive because it will not find every possible citation error. It is overinclusive because it may flag citations that are technically correct but formatted in a way that differs from its database. It is a valuable tool, but not a substitute for final human review.
+        </div>
+
+        <h3>How the Application Flags Potential Errors</h3>
+        
+        <p>The application functions by performing a very strict, literal comparison of the citations in your document against its database. Its primary value is in identifying case citations that do not exist.</p>
+        
+        <p>However, its precision means it is <em>overinclusive</em> in flagging issues. If a case name in your document differs from the database entry by even a single comma, a period, or a minor abbreviation (e.g., "Corp." vs. "Corporation"), the application will flag it as a potential mismatch.</p>
+        
+        <div class="limitation-item">
+            <strong>What this means for you:</strong> A flagged citation is not necessarily a hallucination or an error. It is an alert that requires your manual review. The flag may indicate a substantive error, or it may simply be a minor stylistic difference.
+        </div>
+
+        <h3>What the Application Does Not Check</h3>
+        
+        <p>The application is <em>underinclusive</em> and is limited to verifying standard, complete case law citations. It will not find errors or hallucinations for the following types of citations, as it simply ignores them:</p>
+        
+        <ul>
+            <li>Statutes, regulations, or rules of procedure.</li>
+            <li>Law review articles, treatises, or other secondary sources.</li>
+            <li>Short-form citations such as <em>Id.</em> or <em>Supra</em>.</li>
+            <li>Incomplete case citations where a volume or page number is missing (e.g., <code>22 U.S. ___</code>).</li>
+        </ul>
+        
+        <div class="limitation-item">
+            <strong>What this means for you:</strong> You must continue to verify these types of citations manually. The application offers no opinion on their validity.
+        </div>
+
+        <h3>Limits on Document Size and Processing Speed</h3>
+        
+        <p>To ensure the application remains available and responsive for all users, there are practical limits on how much content you can analyze at one time.</p>
+        
+        <div class="limitation-item">
+            <strong>1. Limit on Citations Per Document.</strong> The application will check a maximum of 250 citations in any single document you submit for analysis.
+            <ul>
+                <li><strong>What will work:</strong> Submitting a brief with 200 citations. All 200 will be checked.</li>
+                <li><strong>What will not work:</strong> Submitting a brief with 300 citations. The application will check the first 250 citations it finds and will not check the remaining 50.</li>
+                <li><strong>Workaround:</strong> For documents with more than 250 citations, split them into smaller sections and analyze each section separately.</li>
+            </ul>
+        </div>
+        
+        <div class="limitation-item">
+            <strong>2. Limit on Document Length.</strong> The application can only process a document up to approximately 64,000 characters, which is roughly 40-50 pages of standard legal text.
+            <ul>
+                <li><strong>What will work:</strong> Submitting a 30-page motion for analysis.</li>
+                <li><strong>What will not work:</strong> Submitting a 75-page appellate brief. The system will reject the document entirely.</li>
+                <li><strong>Workaround:</strong> For any document longer than 50 pages, you must split it into smaller sections for analysis.</li>
+            </ul>
+        </div>
+        
+        <div class="limitation-item">
+            <strong>3. Limit on Processing Rate.</strong> The system manages a pace of checking approximately 60 citations per minute across all your submissions.
+            <ul>
+                <li><strong>What will work:</strong> Submitting several documents for analysis one after the other, with a brief pause in between.</li>
+                <li><strong>What will not work:</strong> Attempting to submit a dozen documents simultaneously or in very rapid succession. If you exceed the processing-rate limit, the application will temporarily prevent you from starting a new analysis. It will usually display a message indicating when you can try again.</li>
+                <li><strong>Workaround:</strong> If you have many documents to check, submit them sequentially. Wait for one analysis to complete before starting the next.</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>This tool is provided for educational and research purposes. Always consult qualified legal professionals for legal matters.</p>
+        </div>
+    </div>
+</body>
+</html>
