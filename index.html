@@ -439,6 +439,76 @@
             margin-bottom: 5px;
         }
 
+        .input-method-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-method-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .input-method-btn:hover {
+            background: #f8f9ff;
+        }
+
+        .input-method-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .text-editor-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .text-editor {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .editor-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .char-count {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .char-count.warning {
+            color: #ff9800;
+        }
+
+        .char-count.error {
+            color: #dc3545;
+        }
+
         .limitation-category {
             margin-bottom: 25px;
             padding: 15px;
@@ -521,7 +591,19 @@
 
         <div class="main-content" id="mainContent">
             <div class="card upload-section" id="uploadSection">
-                <h2>Upload Document</h2>
+                <h2>Input Document</h2>
+                
+                <!-- Input Method Selector -->
+                <div class="input-method-selector">
+                    <button class="input-method-btn active" id="uploadMethodBtn" onclick="selectInputMethod('upload')">
+                        📁 Get text from file
+                    </button>
+                    <button class="input-method-btn" id="pasteMethodBtn" onclick="selectInputMethod('paste')">
+                        📋 Paste in text
+                    </button>
+                </div>
+
+                <!-- File Upload Area -->
                 <div class="file-upload-area" id="uploadArea">
                     <div class="upload-icon">📄</div>
                     <p><strong>Click to upload or drag & drop</strong></p>
@@ -529,11 +611,24 @@
                     <input type="file" id="fileInput" class="file-input" accept=".txt,.md,.pdf,.docx">
                 </div>
                 
-                <div id="fileInfo" style="display: none;">
-                    <p style="margin-top: 15px; color: #666;">
-                        <strong>Selected file:</strong> <span id="fileName"></span>
-                    </p>
-                    <div class="text-preview" id="textPreview"></div>
+                <!-- Text Editor Container -->
+                <div class="text-editor-container" id="textEditorContainer">
+                    <textarea 
+                        class="text-editor" 
+                        id="textEditor" 
+                        placeholder="Paste your legal document here or start typing...
+
+You can paste content from ChatGPT, Claude, or any other source. Markdown formatting is preserved.
+
+Example:
+In the case of Brown v. Board of Education, 347 U.S. 483 (1954), the Supreme Court held..."
+                    ></textarea>
+                    <div class="editor-controls">
+                        <div class="char-count" id="charCount">0 / 64,000 characters</div>
+                        <button class="btn" style="width: auto; padding: 8px 20px; margin-top: 0;" onclick="clearEditor()">
+                            Clear
+                        </button>
+                    </div>
                 </div>
 
                 <button class="btn" id="analyzeBtn" disabled>
@@ -559,13 +654,16 @@
 
     <script>
         let fileContent = '';
+        let currentInputMethod = 'upload';
+        let originalFileName = '';  // Track the original filename for better export names
+        let hasOriginalFile = false;  // Track whether content came from an uploaded file
         
         const apiKeyInput = document.getElementById('apiKey');
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const textPreview = document.getElementById('textPreview');
+        const textEditor = document.getElementById('textEditor');
+        const textEditorContainer = document.getElementById('textEditorContainer');
+        const charCount = document.getElementById('charCount');
         const analyzeBtn = document.getElementById('analyzeBtn');
         const resultsContainer = document.getElementById('resultsContainer');
         const statsCard = document.getElementById('statsCard');
@@ -577,19 +675,116 @@
             apiKeyInput.value = savedApiKey;
         }
 
+        // ========== INPUT METHOD FUNCTIONS ==========
+        
+        function selectInputMethod(method) {
+            currentInputMethod = method;
+            
+            if (method === 'upload') {
+                document.getElementById('uploadMethodBtn').classList.add('active');
+                document.getElementById('pasteMethodBtn').classList.remove('active');
+                uploadArea.style.display = 'block';
+                textEditorContainer.style.display = 'none';
+            } else {
+                document.getElementById('uploadMethodBtn').classList.remove('active');
+                document.getElementById('pasteMethodBtn').classList.add('active');
+                uploadArea.style.display = 'none';
+                textEditorContainer.style.display = 'block';
+                updateCharCount();
+            }
+            
+            updateAnalyzeButton();
+        }
+        
+        function clearEditor() {
+            textEditor.value = '';
+            fileContent = '';
+            originalFileName = '';  // Clear filename when clearing editor
+            hasOriginalFile = false;  // Reset file flag
+            updateCharCount();
+            updateAnalyzeButton();
+        }
+        
+        function updateCharCount() {
+            const length = textEditor.value.length;
+            charCount.textContent = `${length.toLocaleString()} / 64,000 characters`;
+            
+            charCount.classList.remove('warning', 'error');
+            if (length > 64000) {
+                charCount.classList.add('error');
+            } else if (length > 50000) {
+                charCount.classList.add('warning');
+            }
+        }
+        
+        function updateAnalyzeButton() {
+            if (currentInputMethod === 'upload') {
+                analyzeBtn.disabled = !fileContent || fileContent.length === 0;
+            } else {
+                const editorContent = textEditor.value.trim();
+                analyzeBtn.disabled = !editorContent || editorContent.length === 0 || editorContent.length > 64000;
+            }
+        }
+        
+        // Update character count on input
+        textEditor.addEventListener('input', () => {
+            updateCharCount();
+            updateAnalyzeButton();
+        });
+        
+        // Initialize the input method on page load (after DOM is ready)
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing upload method');
+            console.log('Upload area element:', uploadArea);
+            console.log('Text editor container:', textEditorContainer);
+            selectInputMethod('upload');
+        });
+
         // ========== UTILITY FUNCTIONS ==========
         
         /**
          * Creates a timestamp string for filenames
-         * @returns {string} Timestamp in format YYYY-MM-DD_HH-MM
+         * @returns {string} Timestamp in format YYYY-MM-DD-HHMM
          */
         function createTimestamp() {
             const now = new Date();
             return now.getFullYear() + '-' + 
                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                String(now.getDate()).padStart(2, '0') + '_' + 
-                String(now.getHours()).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + '-' + 
+                String(now.getHours()).padStart(2, '0') + 
                 String(now.getMinutes()).padStart(2, '0');
+        }
+        
+        /**
+         * Generates export filename based on input method and original filename
+         * @param {string} extension - File extension (e.g., 'json', 'csv', 'rtf')
+         * @returns {string} Generated filename
+         */
+        function generateExportFilename(extension) {
+            const timestamp = createTimestamp();
+            
+            console.log('Generating filename:');
+            console.log('  currentInputMethod:', currentInputMethod);
+            console.log('  originalFileName:', originalFileName);
+            console.log('  hasOriginalFile:', hasOriginalFile);
+            
+            if (!hasOriginalFile || !originalFileName) {
+                console.log('  Using fallback filename (no original file)');
+                return `hallucination-fixes-${timestamp}.${extension}`;
+            }
+            
+            // Extract base name without extension from original file
+            const baseName = originalFileName.replace(/\.[^/.]+$/, '');
+            // Clean the base name (remove special characters, replace spaces with hyphens)
+            const cleanBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            
+            console.log('  baseName:', baseName);
+            console.log('  cleanBaseName:', cleanBaseName);
+            
+            const finalFilename = `${cleanBaseName}-hallucination-fixes-${timestamp}.${extension}`;
+            console.log('  finalFilename:', finalFilename);
+            
+            return finalFilename;
         }
 
         /**
@@ -811,8 +1006,11 @@
                 showError('Please upload a .txt, .md, .pdf, or .docx file');
                 return;
             }
-
-            fileName.textContent = file.name;
+            
+            // Store original filename for better export names
+            originalFileName = file.name;
+            hasOriginalFile = true;
+            console.log('File uploaded, storing originalFileName:', originalFileName);
             
             // Extract text based on file type
             extractTextFromFile(file).then(extractedText => {
@@ -823,18 +1021,36 @@
                     return;
                 }
                 
-                textPreview.textContent = fileContent.substring(0, 500) + 
-                    (fileContent.length > 500 ? '...' : '');
-                fileInfo.style.display = 'block';
-                analyzeBtn.disabled = false;
+                // Switch to paste/edit mode and populate the editor
+                selectInputMethod('paste');
+                textEditor.value = fileContent;
+                updateCharCount();
+                updateAnalyzeButton();
+                
+                // Show success message
+                showSuccess(`File "${file.name}" loaded successfully. You can now edit the content before analyzing.`);
             }).catch(error => {
                 showError('Error reading file: ' + error.message);
             });
         }
 
         analyzeBtn.addEventListener('click', async () => {
-            if (!fileContent) {
-                showError('No file content to analyze');
+            // Get content from the appropriate source
+            let contentToAnalyze = '';
+            if (currentInputMethod === 'paste') {
+                contentToAnalyze = textEditor.value.trim();
+                fileContent = contentToAnalyze; // Update fileContent for context extraction
+            } else {
+                contentToAnalyze = fileContent;
+            }
+            
+            if (!contentToAnalyze) {
+                showError('No content to analyze');
+                return;
+            }
+            
+            if (contentToAnalyze.length > 64000) {
+                showError('Content is too large. Maximum 64,000 characters allowed.');
                 return;
             }
 
@@ -861,7 +1077,7 @@
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'Authorization': `Token ${apiKey}`
                     },
-                    body: 'text=' + encodeURIComponent(fileContent)
+                    body: 'text=' + encodeURIComponent(contentToAnalyze)
                 });
 
                 if (!response.ok) {
@@ -1586,6 +1802,14 @@
                 </div>
             `;
         }
+        
+        function showSuccess(message) {
+            resultsContainer.innerHTML = `
+                <div class="success-message">
+                    ${message}
+                </div>
+            `;
+        }
 
         // Export functions
         function getStatusSymbol(status, printFriendly = false) {
@@ -1611,7 +1835,6 @@
         function exportToCSV() {
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
-            const timestamp = createTimestamp();
             
             // Prepare standardized export data
             const exportData = prepareExportData(citations, stats);
@@ -1630,7 +1853,7 @@
                 ].join(','))
             ].join('\n');
 
-            const filename = 'citation-editing-guide_' + timestamp + '.csv';
+            const filename = generateExportFilename('csv');
             downloadFile(csvContent, filename, 'text/csv');
         }
 
@@ -1673,22 +1896,14 @@
                 })
             };
 
-            const now = new Date();
-            const timestamp = now.getFullYear() + '-' + 
-                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                String(now.getDate()).padStart(2, '0') + '_' + 
-                String(now.getHours()).padStart(2, '0') + '-' + 
-                String(now.getMinutes()).padStart(2, '0');
-            
             const jsonContent = JSON.stringify(exportData, null, 2);
-            const filename = 'citation-editing-guide_' + timestamp + '.json';
+            const filename = generateExportFilename('json');
             downloadFile(jsonContent, filename, 'application/json');
         }
 
         function exportToWord() {
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
-            const timestamp = createTimestamp();
             
             // Prepare standardized export data
             const exportData = prepareExportData(citations, stats);
@@ -1735,14 +1950,13 @@
 
             rtfContent += '}';
             
-            const filename = 'citation-editing-guide_' + timestamp + '.rtf';
+            const filename = generateExportFilename('rtf');
             downloadFile(rtfContent, filename, 'application/rtf');
         }
 
         function exportToMarkdown() {
             const citations = window.currentCitations || [];
             const stats = window.currentStats || {};
-            const timestamp = createTimestamp();
             
             // Prepare standardized export data
             const exportData = prepareExportData(citations, stats);
@@ -1784,7 +1998,7 @@
                 markdownContent += '---\n\n';
             });
 
-            const filename = 'citation-editing-guide_' + timestamp + '.md';
+            const filename = generateExportFilename('md');
             downloadFile(markdownContent, filename, 'text/markdown');
         }
 
@@ -1953,7 +2167,8 @@
                 printWindow.document.close();
             } else {
                 // Fallback: create downloadable HTML file
-                downloadFile(printHTML, 'citation-editing-guide.html', 'text/html');
+                const filename = generateExportFilename('html');
+                downloadFile(printHTML, filename, 'text/html');
                 alert('Pop-up blocked. Downloaded HTML file instead - open it and print from your browser.');
             }
         }
@@ -1982,7 +2197,7 @@
             const summaryApiStatus = document.getElementById('summaryApiStatus');
             
             uploadSummary.classList.add('visible');
-            summaryFileName.textContent = document.getElementById('fileName').textContent || 'Document uploaded';
+            summaryFileName.textContent = currentInputMethod === 'paste' ? 'Pasted/Edited Text' : 'Uploaded Document';
             summaryApiStatus.textContent = apiKeyInput.value ? 'Connected' : 'Missing';
             
             // Switch main content to single column
