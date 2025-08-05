@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Case Hallucination Assistant - Powered by Eyecite</title>
+    <title>Case Hallucination Detective - Powered by Eyecite</title>
     <style>
         * {
             margin: 0;
@@ -474,7 +474,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 Case Hallucination Assistant</h1>
+            <h1>📚 Case Hallucination Detective</h1>
             <p>Upload a file to extract case citations and determine the risk that they are hallucinations. Relies on technology and data from Free.law.</p>
         </div>
 
@@ -572,7 +572,7 @@
         const statsContainer = document.getElementById('statsContainer');
 
         // Load API key from localStorage if available
-        const savedApiKey = localStorage.getItem('courtlistener_api_key') || '84c32604049750c1d43a745744fd28563d21334e';
+        const savedApiKey = localStorage.getItem('courtlistener_api_key');
         if (savedApiKey) {
             apiKeyInput.value = savedApiKey;
         }
