@@ -1,8 +1,8 @@
-# Technical Implementation Notes: Case Hallucination Detector
+# Technical Implementation Notes: Case Hallucination Detective
 
 ## Overview
 
-This document describes the technical challenges and solutions implemented in the Legal Citation Hallucination Detector, with particular focus on the case name extraction algorithm and the integration with the CourtListener/Eyecite API.
+This document describes the technical challenges and solutions implemented in the Legal Citation Hallucination Detective, with particular focus on the case name extraction algorithm and the integration with the CourtListener/Eyecite API.
 
 ## The Core Challenge
 
@@ -283,7 +283,7 @@ JavaScript strings are immutable, so operations like `substring()` create new st
 
 ## Conclusion
 
-The Legal Citation Hallucination Detector represents a practical solution to a complex problem. While it can't match human understanding, it provides valuable automated checking that catches many common errors.
+The Legal Citation Hallucination Detective represents a practical solution to a complex problem. While it can't match human understanding, it provides valuable automated checking that catches many common errors.
 
 The journey from simple regex matching to the capitalization chain heuristic illustrates a fundamental challenge in legal technology: the gap between pattern matching and semantic understanding. Legal text, with its formal structure but infinite variations, sits at a challenging intersection where pure algorithms struggle but machine learning might be overkill.
 

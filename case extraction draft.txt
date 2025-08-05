@@ -1,0 +1,213 @@
+Hello. As another AI, you'll appreciate the trade-offs between heuristic-based pattern matching and true semantic understanding. The extractCaseName function is a sophisticated example of the former. Here is a breakdown of its design, its confessed limitations, and why its failure cases are non-trivial to solve.
+
+How and Why The Function Works
+
+The function's core philosophy is to treat case name extraction not as a search for a specific pattern (like [Text] v. [Text]) but as a boundary detection problem. It assumes the case name is a proper noun phrase located immediately adjacent to its citation. Its primary tool is the "Capitalization Chain" heuristic.
+	1	Primary Strategy: Backward Search
+	◦	Anchor Point: It uses the citationSpan.start index as an anchor. It knows the case name must end right before this point.
+	◦	Capitalization Chain: It iterates backward from the anchor, word by word. It "collects" words into the case name if they meet specific criteria:
+	1	The word is capitalized (e.g., "Hawkins").
+	2	The word is a number (for in rem cases like "40 Barrels...").
+	3	The word is a known lowercase connector (e.g., "of", "v.", "ex rel."). These are stored in a Set for O(1) lookup efficiency.
+	◦	Boundary Detection: The chain is broken, and the start of the case name is identified, when the algorithm encounters a word that is not part of the chain—typically a lowercase verb or introductory word (e.g., "held", "in", "see"). These "stop words" are also stored in a Set. This is the crucial step that separates the case name from the surrounding prose.
+	2	Fallback Strategy: Forward Search
+	◦	This secondary method handles the less common but still prevalent pattern where the citation precedes the name (e.g., ...as established in 387 U.S. 1, In re Gault...).
+	◦	It works similarly but in the opposite direction, starting from citationSpan.end and building a capitalization chain forward until the chain breaks.
+This two-pronged, heuristic-driven approach is efficient and surprisingly effective because it mimics how a human visually scans for the proper noun phrase attached to a citation.
+
+Confession of Limitations & Difficult Failure Cases
+
+The function's strength—its reliance on lexical patterns—is also its primary weakness. It is a pattern-matcher, not a reader.
+1. Capitalization Dependency (The Achilles' Heel)
+	•	Limitation: The entire model rests on the assumption of consistent, correct capitalization. If it encounters text that is ALL CAPS, or a source where case names are not capitalized for stylistic reasons, the logic will completely fail.
+	•	Why it's hard to solve: Without capitalization as a signal, you lose the primary distinction between a common noun ("the bridge") and a proper noun ("The Charles River Bridge"). Solving this would require a massive dictionary of known legal entities and case names to check against, moving from a general heuristic to a specific knowledge-base lookup.
+2. Vocabulary Brittleness
+	•	Limitation: The lowercaseConnectors and stopWords sets are finite. A legal writer might use a synonym not in the set (e.g., using "finding" instead of "holding"), causing the boundary to be misplaced.
+	•	Why it's hard to solve: This is an endless arms race. While the sets can be expanded, you cannot predict every possible word choice. True robustness would require part-of-speech (POS) tagging to identify verbs, nouns, and prepositions dynamically, which is a step toward full NLP.
+3. Structural and Grammatical Ambiguity (The Hardest Problems)
+	•	Limitation: The function cannot parse grammar. It will fail on sentences that are lexically simple but grammatically complex.
+	•	Example Failure Case 1: Conjoined Names
+	◦	Text: "...the precedents from Smith v. Jones and The Proprietors of the Charles River Bridge, 36 U.S. 420 (1837), are both relevant."
+	◦	How it Fails: The backward search will start from the citation and incorrectly identify the entire phrase "Smith v. Jones and The Proprietors of the Charles River Bridge" as a single case name.
+	◦	Why it's hard to solve: A human sees the conjunction "and" and understands it separates two distinct titles. A machine needs a grammatical parser (a constituency or dependency parser) to understand that "and" connects two noun phrases. This is computationally expensive and far beyond simple string manipulation.
+	•	Example Failure Case 2: Embedded Descriptive Clauses
+	◦	Text: "...in the controversial ruling known as The Slaughter-House Cases, 83 U.S. 36 (1873), the court..."
+	◦	How it Fails: The algorithm might incorrectly include parts of the descriptive phrase, like "known as," if those words aren't explicitly in the stopWords set.
+	◦	Why it's hard to solve: Differentiating a formal title from a description of that title requires semantic context. The function doesn't know that "The Slaughter-House Cases" is the name, while "the controversial ruling known as" is prose about the name. This requires a level of world knowledge or advanced entity recognition that heuristics cannot provide.
+
+Hello. As another AI, you'll appreciate the trade-offs between heuristic-based pattern matching and true semantic understanding. The extractCaseName function is a sophisticated example of the former. Here is a breakdown of its design, its confessed limitations, and why its failure cases are non-trivial to solve.
+
+How and Why The Function Works
+
+The function's core philosophy is to treat case name extraction not as a search for a specific pattern (like [Text] v. [Text]) but as a boundary detection problem. It assumes the case name is a proper noun phrase located immediately adjacent to its citation. Its primary tool is the "Capitalization Chain" heuristic.
+	1	Primary Strategy: Backward Search
+	◦	Anchor Point: It uses the citationSpan.start index as an anchor. It knows the case name must end right before this point.
+	◦	Capitalization Chain: It iterates backward from the anchor, word by word. It "collects" words into the case name if they meet specific criteria:
+	1	The word is capitalized (e.g., "Hawkins").
+	2	The word is a number (for in rem cases like "40 Barrels...").
+	3	The word is a known lowercase connector (e.g., "of", "v.", "ex rel."). These are stored in a Set for O(1) lookup efficiency.
+	◦	Boundary Detection: The chain is broken, and the start of the case name is identified, when the algorithm encounters a word that is not part of the chain—typically a lowercase verb or introductory word (e.g., "held", "in", "see"). These "stop words" are also stored in a Set. This is the crucial step that separates the case name from the surrounding prose.
+	2	Fallback Strategy: Forward Search
+	◦	This secondary method handles the less common but still prevalent pattern where the citation precedes the name (e.g., ...as established in 387 U.S. 1, In re Gault...).
+	◦	It works similarly but in the opposite direction, starting from citationSpan.end and building a capitalization chain forward until the chain breaks.
+This two-pronged, heuristic-driven approach is efficient and surprisingly effective because it mimics how a human visually scans for the proper noun phrase attached to a citation.
+
+Confession of Limitations & Difficult Failure Cases
+
+The function's strength—its reliance on lexical patterns—is also its primary weakness. It is a pattern-matcher, not a reader.
+1. Capitalization Dependency (The Achilles' Heel)
+	•	Limitation: The entire model rests on the assumption of consistent, correct capitalization. If it encounters text that is ALL CAPS, or a source where case names are not capitalized for stylistic reasons, the logic will completely fail.
+	•	Why it's hard to solve: Without capitalization as a signal, you lose the primary distinction between a common noun ("the bridge") and a proper noun ("The Charles River Bridge"). Solving this would require a massive dictionary of known legal entities and case names to check against, moving from a general heuristic to a specific knowledge-base lookup.
+2. Vocabulary Brittleness
+	•	Limitation: The lowercaseConnectors and stopWords sets are finite. A legal writer might use a synonym not in the set (e.g., using "finding" instead of "holding"), causing the boundary to be misplaced.
+	•	Why it's hard to solve: This is an endless arms race. While the sets can be expanded, you cannot predict every possible word choice. True robustness would require part-of-speech (POS) tagging to identify verbs, nouns, and prepositions dynamically, which is a step toward full NLP.
+3. Structural and Grammatical Ambiguity (The Hardest Problems)
+	•	Limitation: The function cannot parse grammar. It will fail on sentences that are lexically simple but grammatically complex.
+	•	Example Failure Case 1: Conjoined Names
+	◦	Text: "...the precedents from Smith v. Jones and The Proprietors of the Charles River Bridge, 36 U.S. 420 (1837), are both relevant."
+	◦	How it Fails: The backward search will start from the citation and incorrectly identify the entire phrase "Smith v. Jones and The Proprietors of the Charles River Bridge" as a single case name.
+	◦	Why it's hard to solve: A human sees the conjunction "and" and understands it separates two distinct titles. A machine needs a grammatical parser (a constituency or dependency parser) to understand that "and" connects two noun phrases. This is computationally expensive and far beyond simple string manipulation.
+	•	Example Failure Case 2: Embedded Descriptive Clauses
+	◦	Text: "...in the controversial ruling known as The Slaughter-House Cases, 83 U.S. 36 (1873), the court..."
+	◦	How it Fails: The algorithm might incorrectly include parts of the descriptive phrase, like "known as," if those words aren't explicitly in the stopWords set.
+	◦	Why it's hard to solve: Differentiating a formal title from a description of that title requires semantic context. The function doesn't know that "The Slaughter-House Cases" is the name, while "the controversial ruling known as" is prose about the name. This requires a level of world knowledge or advanced entity recognition that heuristics cannot provide.
+
+/**
+ * Extracts a legal case name from a text based on the position of its citation.
+ * This function uses a "Capitalization Chain" heuristic, working backward from the
+ * citation to identify the sequence of capitalized words and connectors that
+ * constitute the case name. If that fails, it attempts a forward search.
+ *
+ * @param {string} fullText The complete legal text to search within.
+ * @param {{start: number, end: number}} citationSpan An object containing the zero-indexed start and end positions of the citation string.
+ * @param {number} searchBefore The maximum number of characters to search backward from the start of the citationSpan.
+ * @param {number} searchAfter The maximum number of characters to search forward from the end of the citationSpan.
+ * @returns {string|null} The most likely case name as a string, or null if no plausible name is found.
+ */
+function extractCaseName(fullText, citationSpan, searchBefore, searchAfter) {
+    // --- 1. Input Validation and Setup ---
+
+    if (!fullText || !citationSpan || typeof citationSpan.start === 'undefined') {
+        console.error("Invalid input: fullText and citationSpan must be provided.");
+        return null;
+    }
+
+    // EXPANDED: Added more connectors and variants like "v." and "vs."
+    const lowercaseConnectors = new Set([
+        'of', 'the', 'and', 'in', 'on', 'for', 'to', 'v', 'v.', 'vs', 'vs.', 'ex', 'rel',
+        'et', 'al'
+    ]);
+
+    // EXPANDED: Added more common verbs and signals to better define boundaries.
+    const stopWords = new Set([
+        'see', 'see,', 'in', 'cf', 'cf.', 'e.g.', 'e.g.,', 'in:', 'case', 'held', 'argued',
+        'cited', 'citing', 'explained', 'from', 'under', 'involving', 'ruling', 'decision',
+        'holding', 'affirming', 'quoting', 'finding', 'stating', 'noting'
+    ]);
+
+    // --- 2. Primary Method: Backward Search (Capitalization Chain) ---
+
+    function searchBackward() {
+        const windowStart = Math.max(0, citationSpan.start - searchBefore);
+        const searchWindow = fullText.substring(windowStart, citationSpan.start);
+        const words = searchWindow.trim().split(/\s+/).filter(Boolean);
+
+        if (words.length === 0) return null;
+
+        let nameEndIndex = words.length;
+        let nameStartIndex = -1;
+
+        for (let i = words.length - 1; i >= 0; i--) {
+            let word = words[i];
+            const cleanedWord = word.replace(/[,;:]+$/, '');
+            const lowerCaseWord = cleanedWord.toLowerCase();
+
+            if (stopWords.has(lowerCaseWord)) {
+                nameStartIndex = i + 1;
+                break;
+            }
+
+            const isCapitalized = /^[A-Z]/.test(cleanedWord);
+            const isNumeric = /^\d+$/.test(cleanedWord);
+            const isPartOfChain = isCapitalized || isNumeric || lowercaseConnectors.has(lowerCaseWord);
+
+            if (!isPartOfChain) {
+                nameStartIndex = i + 1;
+                break;
+            }
+
+            if (i === 0) {
+                nameStartIndex = 0;
+            }
+        }
+
+        if (nameStartIndex === -1 || nameStartIndex >= nameEndIndex) return null;
+
+        const caseNameWords = words.slice(nameStartIndex, nameEndIndex);
+        const finalCaseName = caseNameWords.join(' ').trim();
+        return finalCaseName.replace(/[,;:]\s*$/, '');
+    }
+
+    // --- 3. NEW: Fallback Method: Forward Search ---
+    
+    function searchForward() {
+        // Only proceed if searchAfter is a positive number.
+        if (!searchAfter || searchAfter <= 0) return null;
+
+        const windowEnd = Math.min(fullText.length, citationSpan.end + searchAfter);
+        // Start searching right after the citation, cleaning up potential leading punctuation.
+        const searchWindow = fullText.substring(citationSpan.end, windowEnd).replace(/^[\s,;:]+/, '');
+        const words = searchWindow.trim().split(/\s+/).filter(Boolean);
+
+        if (words.length === 0) return null;
+
+        let nameStartIndex = 0;
+        let nameEndIndex = -1;
+        
+        // The first word MUST start the chain (be capitalized or numeric).
+        const firstWord = words[0];
+        if (!/^[A-Z]/.test(firstWord) && !/^\d+$/.test(firstWord)) {
+            return null; // Doesn't look like a case name.
+        }
+
+        // Iterate forward to find the end of the chain.
+        for (let i = 0; i < words.length; i++) {
+            const cleanedWord = words[i].replace(/[,;:]+$/, '');
+            const lowerCaseWord = cleanedWord.toLowerCase();
+
+            const isCapitalized = /^[A-Z]/.test(cleanedWord);
+            const isNumeric = /^\d+$/.test(cleanedWord);
+            const isPartOfChain = isCapitalized || isNumeric || lowercaseConnectors.has(lowerCaseWord);
+
+            if (!isPartOfChain) {
+                // The chain is broken, so the name ended at the previous word.
+                nameEndIndex = i;
+                break;
+            }
+            
+            // If the loop finishes, the whole window is the name.
+            if (i === words.length - 1) {
+                nameEndIndex = words.length;
+            }
+        }
+
+        if (nameEndIndex <= nameStartIndex) return null;
+
+        const caseNameWords = words.slice(nameStartIndex, nameEndIndex);
+        return caseNameWords.join(' ').trim();
+    }
+
+    // --- 4. Execution Flow ---
+
+    // First, try the primary backward search method.
+    let result = searchBackward();
+
+    // If the backward search fails, and a forward search is allowed, try that.
+    if (!result || result.length === 0) {
+        result = searchForward();
+    }
+
+    // Return the final result, which could be from either search, or null.
+    return result;
+}
+

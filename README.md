@@ -1,4 +1,4 @@
-# Legal Citation Hallucination Detector
+# Legal Citation Hallucination Detective
 
 A web-based tool for detecting hallucinated legal citations in documents, powered by CourtListener's Eyecite API.
 

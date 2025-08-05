@@ -1,4 +1,4 @@
-# Legal Citation Hallucination Detector - User's Guide
+# Legal Citation Hallucination Detective - User's Guide
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -11,7 +11,7 @@
 
 ## Introduction
 
-The Legal Citation Hallucination Detector is a web-based tool designed to help legal professionals identify potentially problematic case citations in their documents. Whether you're concerned about AI-generated content, checking a junior associate's work, or simply want an extra layer of verification, this tool provides a systematic way to validate legal citations against the CourtListener database.
+The Legal Citation Hallucination Detective is a web-based tool designed to help legal professionals identify potentially problematic case citations in their documents. Whether you're concerned about AI-generated content, checking a junior associate's work, or simply want an extra layer of verification, this tool provides a systematic way to validate legal citations against the CourtListener database.
 
 ### What This Tool Can Do
 - Detect completely fabricated case citations
@@ -84,7 +84,7 @@ Catrett, 477 U.S. 317 (1986), the moving party bears the initial burden...
 4. Click Save
 
 #### 2. Upload and Analysis
-1. Open the Citation Hallucination Detector in your browser
+1. Open the Citation Hallucination Detective in your browser
 2. Enter your CourtListener API key
 3. Click the upload area or drag your .txt file
 4. Review the preview to ensure formatting looks correct
@@ -365,7 +365,7 @@ For repeated use:
 
 ## Conclusion
 
-The Legal Citation Hallucination Detector is a powerful first-line defense against citation errors, but it's not infallible. Use it as part of a comprehensive review process that includes:
+The Legal Citation Hallucination Detective is a powerful first-line defense against citation errors, but it's not infallible. Use it as part of a comprehensive review process that includes:
 
 1. Automated checking (this tool)
 2. Manual verification of propositions
